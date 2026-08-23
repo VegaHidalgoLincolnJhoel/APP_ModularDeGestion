@@ -248,7 +248,7 @@ components:
           additionalProperties: true
           description: Flags de módulos opcionales activos para este negocio.
         plan_estado: { type: string }
-        fecha_ultimo_pago: { type: string, format: date }
+        fecha_ultimo_pago: { type: string, format: date, nullable: true }
         link_sunat: { type: string, nullable: true }
         modulo_rus_activo: { type: boolean }
       required: [nombre, rubro]
@@ -268,12 +268,12 @@ components:
       type: object
       properties:
         nombre: { type: string }
-        medida: { type: string }
-        marca: { type: string }
-        estado_uso: { type: string }
-        precio_lista: { type: number, format: decimal }
-        precio_compra: { type: number, format: decimal }
-        clasificacion: { type: string }
+        medida: { type: string, nullable: true }
+        marca: { type: string, nullable: true }
+        estado_uso: { type: string, nullable: true }
+        precio_lista: { type: string, format: decimal }
+        precio_compra: { type: string, format: decimal }
+        clasificacion: { type: string, nullable: true }
         stock_actual: { type: integer }
         stock_minimo: { type: integer }
         activo: { type: boolean }
@@ -299,10 +299,10 @@ components:
         producto_id: { type: integer }
         cliente_vehiculo_id: { type: integer, nullable: true }
         tipo: { type: string, description: "ej. venta, servicio" }
-        descripcion: { type: string }
-        precio_lista: { type: number, format: decimal }
-        precio_final: { type: number, format: decimal }
-        metodo_pago: { type: string }
+        descripcion: { type: string, nullable: true }
+        precio_lista: { type: string, format: decimal }
+        precio_final: { type: string, format: decimal }
+        metodo_pago: { type: string, nullable: true }
         fecha: { type: string, format: date-time }
       required: [usuario_id, producto_id, tipo]
 
@@ -327,11 +327,11 @@ components:
         periodo: { type: string }
         fecha_inicio: { type: string, format: date }
         fecha_fin: { type: string, format: date }
-        total_bruto: { type: number, format: decimal }
-        total_capital: { type: number, format: decimal }
-        total_ganancia: { type: number, format: decimal }
-        total_efectivo: { type: number, format: decimal }
-        total_digital: { type: number, format: decimal }
+        total_bruto: { type: string, format: decimal }
+        total_capital: { type: string, format: decimal }
+        total_ganancia: { type: string, format: decimal }
+        total_efectivo: { type: string, format: decimal }
+        total_digital: { type: string, format: decimal }
 
     ClienteVehiculo:
       type: object
@@ -339,14 +339,14 @@ components:
         id: { type: integer }
         negocio_id: { type: integer }
         nombre_cliente: { type: string }
-        telefono: { type: string }
-        placa: { type: string }
-        marca_vehiculo: { type: string }
-        modelo_vehiculo: { type: string }
-        tipo_aceite: { type: string }
-        intervalo_meses: { type: integer }
-        fecha_ultimo_servicio: { type: string, format: date }
-        fecha_proximo_mantenimiento: { type: string, format: date }
+        telefono: { type: string, nullable: true }
+        placa: { type: string, nullable: true }
+        marca_vehiculo: { type: string, nullable: true }
+        modelo_vehiculo: { type: string, nullable: true }
+        tipo_aceite: { type: string, nullable: true }
+        intervalo_meses: { type: integer, nullable: true }
+        fecha_ultimo_servicio: { type: string, format: date, nullable: true }
+        fecha_proximo_mantenimiento: { type: string, format: date, nullable: true }
         activo: { type: boolean }
 
     ColaSyncItem:

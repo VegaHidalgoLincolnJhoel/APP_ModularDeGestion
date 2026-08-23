@@ -18,9 +18,18 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // Merge explícito: un spread `{ headers: {...}, ...init }` pisa el objeto
+  // `headers` entero si el caller pasa el suyo (ej. Authorization), perdiendo
+  // Content-Type. `Headers` sí mergea correctamente sin importar si
+  // `init.headers` viene como objeto plano, array de tuplas o Headers.
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (init?.headers) {
+    new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+  }
+
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers,
   });
 
   if (!res.ok) {

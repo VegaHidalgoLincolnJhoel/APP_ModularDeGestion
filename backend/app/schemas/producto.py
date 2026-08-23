@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -6,8 +8,10 @@ class ProductoBase(BaseModel):
     medida: str | None = None
     marca: str | None = None
     estado_uso: str | None = None
-    precio_lista: float = 0
-    precio_compra: float = 0
+    # Decimal, no float: coincide con Numeric(10, 2) en el modelo SQLAlchemy
+    # y evita errores de precisión al sumar montos (cierres de caja, etc.).
+    precio_lista: Decimal = Decimal("0")
+    precio_compra: Decimal = Decimal("0")
     clasificacion: str | None = None
     stock_actual: int = 0
     stock_minimo: int = 0
