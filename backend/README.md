@@ -10,8 +10,7 @@ carpeta para las reglas de trabajo, y `../docs/ARCHITECTURE.md` /
 cp .env.example .env      # ajustar DATABASE_URL a tu Postgres local
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-alembic revision --autogenerate -m "init schema"
-alembic upgrade head
+alembic upgrade head      # aplica la migración inicial (alembic/versions/)
 uvicorn app.main:app --reload
 ```
 
@@ -36,3 +35,8 @@ está esbozado en `../docs/openapi.yaml`.
 
 Pendiente de definir: autenticación/autorización (login, sesión por
 negocio y rol de usuario).
+
+Cuando agregues/edites un modelo, generá la migración correspondiente con
+`alembic revision --autogenerate -m "..."` y commiteala junto con el
+cambio de modelo — no dejes `alembic/versions/` sin la migración que
+corresponde al esquema actual.

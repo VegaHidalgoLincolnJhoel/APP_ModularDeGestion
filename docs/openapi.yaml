@@ -238,10 +238,9 @@ components:
                 type: string
 
   schemas:
-    Negocio:
+    NegocioBase:
       type: object
       properties:
-        id: { type: integer }
         nombre: { type: string }
         rubro: { type: string }
         modulos_activos:
@@ -252,18 +251,22 @@ components:
         fecha_ultimo_pago: { type: string, format: date }
         link_sunat: { type: string, nullable: true }
         modulo_rus_activo: { type: boolean }
-      required: [id, nombre, rubro]
+      required: [nombre, rubro]
+
+    Negocio:
+      allOf:
+        - $ref: "#/components/schemas/NegocioBase"
+        - type: object
+          properties:
+            id: { type: integer }
+          required: [id]
 
     NegocioCreate:
-      allOf:
-        - $ref: "#/components/schemas/Negocio"
-      description: Igual a Negocio pero sin id (se genera en el servidor).
+      $ref: "#/components/schemas/NegocioBase"
 
-    Producto:
+    ProductoBase:
       type: object
       properties:
-        id: { type: integer }
-        negocio_id: { type: integer }
         nombre: { type: string }
         medida: { type: string }
         marca: { type: string }
@@ -274,17 +277,24 @@ components:
         stock_actual: { type: integer }
         stock_minimo: { type: integer }
         activo: { type: boolean }
-      required: [id, negocio_id, nombre]
+      required: [nombre]
+
+    Producto:
+      allOf:
+        - $ref: "#/components/schemas/ProductoBase"
+        - type: object
+          properties:
+            id: { type: integer }
+            negocio_id: { type: integer }
+          required: [id, negocio_id]
 
     ProductoCreate:
-      allOf:
-        - $ref: "#/components/schemas/Producto"
+      $ref: "#/components/schemas/ProductoBase"
+      description: negocio_id no va en el body — viene del path /negocios/{negocioId}/productos.
 
-    Movimiento:
+    MovimientoBase:
       type: object
       properties:
-        id: { type: integer }
-        negocio_id: { type: integer }
         usuario_id: { type: integer }
         producto_id: { type: integer }
         cliente_vehiculo_id: { type: integer, nullable: true }
@@ -294,11 +304,20 @@ components:
         precio_final: { type: number, format: decimal }
         metodo_pago: { type: string }
         fecha: { type: string, format: date-time }
-      required: [id, negocio_id, usuario_id, producto_id, tipo]
+      required: [usuario_id, producto_id, tipo]
+
+    Movimiento:
+      allOf:
+        - $ref: "#/components/schemas/MovimientoBase"
+        - type: object
+          properties:
+            id: { type: integer }
+            negocio_id: { type: integer }
+          required: [id, negocio_id]
 
     MovimientoCreate:
-      allOf:
-        - $ref: "#/components/schemas/Movimiento"
+      $ref: "#/components/schemas/MovimientoBase"
+      description: negocio_id no va en el body — viene del path /negocios/{negocioId}/movimientos.
 
     CierreCaja:
       type: object
