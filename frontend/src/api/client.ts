@@ -39,7 +39,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       detail = body;
     }
-    throw new ApiError(res.status, body || res.statusText, detail);
+    // FastAPI devuelve errores simples como {"detail": "mensaje humano"} —
+    // si el body sigue esa forma, .message queda con el texto limpio en
+    // vez del JSON crudo. Los 409 con detail estructurado (candidatos de
+    // duplicado, stock bajo mínimo) no matchean esto y caen al body tal
+    // cual, pero esos ya se manejan por su propia subclase de error, no
+    // leyendo .message.
+    const message =
+      detail && typeof detail === "object" && typeof (detail as { detail?: unknown }).detail === "string"
+        ? (detail as { detail: string }).detail
+        : body || res.statusText;
+    throw new ApiError(res.status, message, detail);
   }
 
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
@@ -142,6 +152,24 @@ export interface CierreCajaCreate {
   fecha_fin: string;
 }
 
+/** Registro auditado (feed de SUNAT) — requiere modulo_rus_activo. Para
+ * una corrección simple sin ese rastro está ajustarStock más abajo. */
+export interface RegistroCompra {
+  id: number;
+  negocio_id: number;
+  producto_id: number;
+  cantidad: number;
+  costo_unitario: string;
+  fecha: string;
+}
+
+export interface RegistroCompraCreate {
+  producto_id: number;
+  cantidad: number;
+  costo_unitario: string;
+  fecha?: string | null;
+}
+
 /** Se lanza cuando el backend responde 409 a una venta que deja el stock
  * bajo el mínimo — el flujo debe mostrar el modal de confirmación y
  * reintentar con confirmarBajoMinimo: true. */
@@ -194,4 +222,22 @@ export const api = {
     request<CierreCaja[]>(`/negocios/${negocioId}/cierres-caja`),
   createCierreCaja: (negocioId: number, payload: CierreCajaCreate) =>
     request<CierreCaja>(`/negocios/${negocioId}/cierres-caja`, json(payload)),
+
+  /** Gateado por modulo_rus_activo (403 si no está activo). Suma
+   * `cantidad` a stock_actual y queda como historial para SUNAT. */
+  listRegistroCompras: (negocioId: number) =>
+    request<RegistroCompra[]>(`/negocios/${negocioId}/registro-compras`),
+  createRegistroCompra: (negocioId: number, payload: RegistroCompraCreate) =>
+    request<RegistroCompra>(`/negocios/${negocioId}/registro-compras`, json(payload)),
+
+  /** Corrección directa de stock_actual, siempre disponible (no depende
+   * de modulo_rus_activo) y sin rastro auditado — para eso está
+   * registro-compras. delta positivo repone, negativo corrige. El
+   * backend responde 400 con detail de texto plano si delta es 0 o si
+   * dejaría el stock negativo. */
+  ajustarStock: (negocioId: number, productoId: number, delta: number) =>
+    request<Producto>(
+      `/negocios/${negocioId}/productos/${productoId}/ajustar-stock`,
+      json({ delta }),
+    ),
 };

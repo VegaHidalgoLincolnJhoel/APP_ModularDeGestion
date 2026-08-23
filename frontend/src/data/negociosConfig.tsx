@@ -40,6 +40,7 @@ export interface NegocioTipoConfig {
    * useNegocio. En producción esto lo decide quien instala la app, no el
    * frontend; acá es solo el valor por defecto de la semilla de prueba. */
   modulosActivosDefault: Record<string, boolean>;
+  moduloRusActivoDefault: boolean;
 }
 
 export const NEGOCIOS_CONFIG = {
@@ -63,6 +64,9 @@ export const NEGOCIOS_CONFIG = {
       { id: "accesorio", label: "Accesorio", icon: NutIcon, clasificacion: "producto" },
     ],
     modulosActivosDefault: {},
+    // El papá (dueño de la llantería) es justo el caso RUS del spec —
+    // negocio chico, régimen simplificado.
+    moduloRusActivoDefault: true,
   },
   lubricentro: {
     rubro: "lubricentro",
@@ -78,6 +82,7 @@ export const NEGOCIOS_CONFIG = {
       { id: "silicona", label: "Silicona", icon: TubeIcon, clasificacion: "producto" },
     ],
     modulosActivosDefault: { clientes_vehiculos: true },
+    moduloRusActivoDefault: false,
   },
 } as const satisfies Record<string, NegocioTipoConfig>;
 

@@ -74,6 +74,11 @@ export default function Inicio() {
           id={`stock-bajo-${productoBajoMinimo.id}`}
           title={`Stock bajo · ${productoBajoMinimo.nombre}`}
           message={`Quedan ${productoBajoMinimo.stock_actual} unidades — el mínimo es ${productoBajoMinimo.stock_minimo}.`}
+          action={
+            <Button variant="accent" onClick={() => navigate(`/${tipo}/stock/ajustar/${productoBajoMinimo.id}`)}>
+              Reponer stock
+            </Button>
+          }
         />
       )}
 

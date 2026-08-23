@@ -20,7 +20,7 @@ export function useNegocioDelTipo() {
     plan_estado: "activo",
     fecha_ultimo_pago: null,
     link_sunat: null,
-    modulo_rus_activo: false,
+    modulo_rus_activo: config.moduloRusActivoDefault,
   });
 
   return { tipo, tipoValido, config, ...negocioState };
