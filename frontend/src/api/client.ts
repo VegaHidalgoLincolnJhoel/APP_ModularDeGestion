@@ -1,9 +1,10 @@
-// Único punto de acceso a la API — no usar `fetch` suelto en componentes.
+// Único punto de acceso a la API — evita `fetch` suelto desperdigado por
+// los componentes, así headers, manejo de errores y base URL quedan en un
+// solo lugar.
 //
-// NOTA_OFFLINE: mientras no exista el store local (IndexedDB) + cola de
-// sync (ver docs/openapi.yaml → POST /negocios/{id}/sync), cualquier
-// escritura hecha desde acá se pierde si no hay red. Antes de construir
-// pantallas que escriben datos en el negocio, resolver esa capa offline.
+// TODO(offline): mientras no exista el store local (IndexedDB) + cola de
+// sync (POST /negocios/{id}/sync, ver docs/openapi.yaml), cualquier
+// escritura hecha desde acá se pierde si no hay red.
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -18,10 +19,8 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  // Merge explícito: un spread `{ headers: {...}, ...init }` pisa el objeto
-  // `headers` entero si el caller pasa el suyo (ej. Authorization), perdiendo
-  // Content-Type. `Headers` sí mergea correctamente sin importar si
-  // `init.headers` viene como objeto plano, array de tuplas o Headers.
+  // Se arma con Headers en vez de un spread de objetos para no perder
+  // Content-Type cuando el caller manda sus propios headers (ej. Authorization).
   const headers = new Headers({ "Content-Type": "application/json" });
   if (init?.headers) {
     new Headers(init.headers).forEach((value, key) => headers.set(key, value));

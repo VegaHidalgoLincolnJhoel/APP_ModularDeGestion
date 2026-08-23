@@ -32,7 +32,7 @@ public/
 - Todo llamado a la API pasa por `src/api/client.ts` (no `fetch` suelto
   desperdigado) para tener un solo lugar de headers/errores/base URL.
 - Todo lo que se cree/edite mientras el negocio está offline debe
-  guardarse localmente (ver `NOTA_OFFLINE` en `src/api/client.ts`) y
+  guardarse localmente (ver `TODO(offline)` en `src/api/client.ts`) y
   encolarse para sync — no asumir que siempre hay red.
 - Pantallas de módulos opcionales (clientes/vehículos, compras) se
   muestran solo si `negocio.modulos_activos` / `modulo_rus_activo` lo
