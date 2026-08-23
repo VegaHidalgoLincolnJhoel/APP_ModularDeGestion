@@ -5,6 +5,7 @@ import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { useProductos } from "../api/useProductos";
+import { useUsuarioPrincipal } from "../api/useUsuarioPrincipal";
 import { api, ApiError, StockBajoMinimoError, type Producto } from "../api/client";
 import { formatMoney, parseMoneyInput } from "../lib/format";
 import { buscarAccion } from "../data/negociosConfig";
@@ -30,6 +31,7 @@ export default function MovimientoFlow() {
   const { accionId } = useParams<{ accionId: string }>();
   const { tipo, tipoValido, config, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
   const { productos, loading: cargandoProductos, recargar } = useProductos(negocio?.id);
+  const { usuarioId, error: errorUsuario } = useUsuarioPrincipal(negocio?.id);
 
   const [paso, setPaso] = useState<Paso>("elegir");
   const [medidaElegida, setMedidaElegida] = useState<string | null>(null);
@@ -70,17 +72,20 @@ export default function MovimientoFlow() {
 
   async function enviar(confirmarBajoMinimo = false) {
     if (!negocio || !productoElegido) return;
+    if (usuarioId === null) {
+      setError(errorUsuario ?? "Todavía no se pudo resolver el usuario del negocio.");
+      return;
+    }
     setEnviando(true);
     setError(null);
     try {
       await api.createMovimiento(
         negocio.id,
         {
-          // TODO: reemplazar por el usuario logueado cuando exista login
-          // (ver "Fuera de alcance por ahora" en CLAUDE.md — hoy no hay
-          // roles/usuarios separados). GET /negocios/{id}/usuarios todavía
-          // no existe en el contrato para resolver esto de otra forma.
-          usuario_id: 1,
+          // Sigue sin haber login por empleado (CLAUDE.md, "Fuera de
+          // alcance por ahora") — usuarioId es el único usuario que
+          // siembra el backend al crear el negocio, no uno elegido.
+          usuario_id: usuarioId,
           producto_id: productoElegido.id,
           cliente_vehiculo_id: null,
           tipo: accion!.clasificacion === "producto" ? "venta" : "servicio",
@@ -306,7 +311,7 @@ export default function MovimientoFlow() {
                 <p className={styles.warnTitle}>Esto deja el stock bajo el mínimo</p>
                 <p className={styles.fieldHint}>¿Confirmás la venta igual?</p>
                 <div className={styles.warnActions}>
-                  <Button variant="accent" onClick={() => enviar(true)} disabled={enviando}>
+                  <Button variant="accent" onClick={() => enviar(true)} disabled={enviando || usuarioId === null}>
                     Sí, confirmar
                   </Button>
                   <Button variant="ghost" onClick={() => setPidiendoConfirmacion(false)}>
@@ -320,7 +325,7 @@ export default function MovimientoFlow() {
           {error && <p className={styles.error}>{error}</p>}
 
           {!pidiendoConfirmacion && (
-            <Button fullWidth onClick={() => enviar(false)} disabled={enviando}>
+            <Button fullWidth onClick={() => enviar(false)} disabled={enviando || usuarioId === null}>
               {enviando ? "Registrando…" : `Confirmar ${accion.clasificacion === "producto" ? "venta" : "servicio"}`}
             </Button>
           )}

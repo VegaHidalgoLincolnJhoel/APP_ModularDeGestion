@@ -66,6 +66,15 @@ export interface Negocio {
 
 export type NegocioCreate = Omit<Negocio, "id">;
 
+export interface Usuario {
+  id: number;
+  negocio_id: number;
+  nombre: string;
+  rol: string;
+}
+
+export type UsuarioCreate = Omit<Usuario, "id" | "negocio_id">;
+
 export interface Producto {
   id: number;
   negocio_id: number;
@@ -126,6 +135,11 @@ export const api = {
   getNegocio: (id: number) => request<Negocio>(`/negocios/${id}`),
   createNegocio: (payload: NegocioCreate) =>
     request<Negocio>("/negocios", json(payload)),
+
+  listUsuarios: (negocioId: number) =>
+    request<Usuario[]>(`/negocios/${negocioId}/usuarios`),
+  createUsuario: (negocioId: number, payload: UsuarioCreate) =>
+    request<Usuario>(`/negocios/${negocioId}/usuarios`, json(payload)),
 
   listProductos: (negocioId: number) =>
     request<Producto[]>(`/negocios/${negocioId}/productos`),
