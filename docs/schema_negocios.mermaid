@@ -1,0 +1,126 @@
+erDiagram
+    NEGOCIO ||--o{ USUARIO : tiene
+    NEGOCIO ||--o{ PRODUCTO : tiene
+    NEGOCIO ||--o{ MOVIMIENTO : registra
+    NEGOCIO ||--o{ CIERRE_CAJA : genera
+    NEGOCIO ||--o{ CLIENTE_VEHICULO : "tiene (si módulo activo)"
+    NEGOCIO ||--o{ ALERTA_DESCARTADA : tiene
+    NEGOCIO ||--o{ REGISTRO_COMPRA : "repone stock (si módulo RUS activo)"
+
+    PRODUCTO ||--o{ MOVIMIENTO : "se vende/usa en"
+    USUARIO ||--o{ MOVIMIENTO : registra
+    MOVIMIENTO ||--o| CLIENTE_VEHICULO : "puede agendar"
+    CLIENTE_VEHICULO ||--o{ MOVIMIENTO : "historial de"
+    CLIENTE_VEHICULO ||--o{ NOTIFICACION_WSP : recibe
+
+    PRODUCTO ||--o{ REGISTRO_COMPRA : "se repone via"
+
+    NEGOCIO {
+        int id PK
+        string nombre
+        string rubro
+        json modulos_activos
+        string plan_estado
+        date fecha_ultimo_pago
+        string link_sunat
+        bool modulo_rus_activo
+    }
+
+    USUARIO {
+        int id PK
+        int negocio_id FK
+        string nombre
+        string rol
+    }
+
+    PRODUCTO {
+        int id PK
+        int negocio_id FK
+        string nombre
+        string medida
+        string marca
+        string estado_uso
+        decimal precio_lista
+        decimal precio_compra
+        string clasificacion
+        int stock_actual
+        int stock_minimo
+        bool activo
+    }
+
+    MOVIMIENTO {
+        int id PK
+        int negocio_id FK
+        int usuario_id FK
+        int producto_id FK
+        int cliente_vehiculo_id FK
+        string tipo
+        string descripcion
+        decimal precio_lista
+        decimal precio_final
+        string metodo_pago
+        datetime fecha
+    }
+
+    CIERRE_CAJA {
+        int id PK
+        int negocio_id FK
+        string periodo
+        date fecha_inicio
+        date fecha_fin
+        decimal total_bruto
+        decimal total_capital
+        decimal total_ganancia
+        decimal total_efectivo
+        decimal total_digital
+    }
+
+    CLIENTE_VEHICULO {
+        int id PK
+        int negocio_id FK
+        string nombre_cliente
+        string telefono
+        string placa
+        string marca_vehiculo
+        string modelo_vehiculo
+        string tipo_aceite
+        int intervalo_meses
+        date fecha_ultimo_servicio
+        date fecha_proximo_mantenimiento
+        bool activo
+    }
+
+    NOTIFICACION_WSP {
+        int id PK
+        int cliente_vehiculo_id FK
+        datetime fecha_envio
+        string estado
+        string tipo
+    }
+
+    ALERTA_DESCARTADA {
+        int id PK
+        int negocio_id FK
+        string tipo
+        int referencia_id
+        date fecha_descarte
+    }
+
+    REGISTRO_COMPRA {
+        int id PK
+        int negocio_id FK
+        int producto_id FK
+        int cantidad
+        decimal costo_unitario
+        date fecha
+    }
+
+    COLA_SYNC {
+        int id PK
+        int negocio_id FK
+        string entidad
+        json payload
+        string estado
+        datetime fecha_creacion
+        datetime fecha_sincronizado
+    }

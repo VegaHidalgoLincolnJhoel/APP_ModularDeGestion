@@ -1,0 +1,352 @@
+openapi: 3.0.3
+info:
+  title: APP_ModularDeGestion API
+  description: >
+    Contrato de la API para el sistema de gestión modular multi-negocio.
+    Fuente de verdad compartida entre frontend y backend — ver
+    docs/ARCHITECTURE.md para el contexto de dominio.
+  version: 0.1.0
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Desarrollo local
+
+tags:
+  - name: negocios
+  - name: usuarios
+  - name: productos
+  - name: movimientos
+  - name: cierres-caja
+  - name: clientes-vehiculos
+  - name: registro-compras
+  - name: sync
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /negocios:
+    get:
+      tags: [negocios]
+      summary: Listar negocios
+      operationId: listNegocios
+      responses:
+        "200":
+          description: Lista de negocios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Negocio"
+    post:
+      tags: [negocios]
+      summary: Crear negocio
+      operationId: createNegocio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NegocioCreate"
+      responses:
+        "201":
+          description: Negocio creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Negocio"
+
+  /negocios/{negocioId}:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+    get:
+      tags: [negocios]
+      summary: Obtener un negocio
+      operationId: getNegocio
+      responses:
+        "200":
+          description: Negocio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Negocio"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /negocios/{negocioId}/productos:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+    get:
+      tags: [productos]
+      summary: Listar productos del negocio
+      operationId: listProductos
+      responses:
+        "200":
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Producto"
+    post:
+      tags: [productos]
+      summary: Crear producto
+      operationId: createProducto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductoCreate"
+      responses:
+        "201":
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Producto"
+
+  /negocios/{negocioId}/movimientos:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+    get:
+      tags: [movimientos]
+      summary: Listar movimientos (ventas/servicios) del negocio
+      operationId: listMovimientos
+      responses:
+        "200":
+          description: Lista de movimientos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Movimiento"
+    post:
+      tags: [movimientos]
+      summary: Registrar movimiento
+      operationId: createMovimiento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MovimientoCreate"
+      responses:
+        "201":
+          description: Movimiento registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Movimiento"
+
+  /negocios/{negocioId}/cierres-caja:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+    get:
+      tags: [cierres-caja]
+      summary: Listar cierres de caja
+      operationId: listCierresCaja
+      responses:
+        "200":
+          description: Lista de cierres de caja
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CierreCaja"
+
+  /negocios/{negocioId}/clientes-vehiculos:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+    get:
+      tags: [clientes-vehiculos]
+      summary: Listar clientes/vehículos (requiere módulo activo)
+      operationId: listClientesVehiculos
+      responses:
+        "200":
+          description: Lista de clientes/vehículos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClienteVehiculo"
+        "403":
+          description: Módulo no activo para este negocio
+
+  /negocios/{negocioId}/sync:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+    post:
+      tags: [sync]
+      summary: >
+        Procesa la cola de sincronización offline enviada por el cliente
+        (frontend). Idempotente por item vía su id generado en cliente.
+      operationId: pushSync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ColaSyncItem"
+      responses:
+        "200":
+          description: Resultado de la sincronización por item
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ColaSyncResultado"
+
+components:
+  parameters:
+    negocioId:
+      name: negocioId
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  responses:
+    NotFound:
+      description: No encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+
+  schemas:
+    Negocio:
+      type: object
+      properties:
+        id: { type: integer }
+        nombre: { type: string }
+        rubro: { type: string }
+        modulos_activos:
+          type: object
+          additionalProperties: true
+          description: Flags de módulos opcionales activos para este negocio.
+        plan_estado: { type: string }
+        fecha_ultimo_pago: { type: string, format: date }
+        link_sunat: { type: string, nullable: true }
+        modulo_rus_activo: { type: boolean }
+      required: [id, nombre, rubro]
+
+    NegocioCreate:
+      allOf:
+        - $ref: "#/components/schemas/Negocio"
+      description: Igual a Negocio pero sin id (se genera en el servidor).
+
+    Producto:
+      type: object
+      properties:
+        id: { type: integer }
+        negocio_id: { type: integer }
+        nombre: { type: string }
+        medida: { type: string }
+        marca: { type: string }
+        estado_uso: { type: string }
+        precio_lista: { type: number, format: decimal }
+        precio_compra: { type: number, format: decimal }
+        clasificacion: { type: string }
+        stock_actual: { type: integer }
+        stock_minimo: { type: integer }
+        activo: { type: boolean }
+      required: [id, negocio_id, nombre]
+
+    ProductoCreate:
+      allOf:
+        - $ref: "#/components/schemas/Producto"
+
+    Movimiento:
+      type: object
+      properties:
+        id: { type: integer }
+        negocio_id: { type: integer }
+        usuario_id: { type: integer }
+        producto_id: { type: integer }
+        cliente_vehiculo_id: { type: integer, nullable: true }
+        tipo: { type: string, description: "ej. venta, servicio" }
+        descripcion: { type: string }
+        precio_lista: { type: number, format: decimal }
+        precio_final: { type: number, format: decimal }
+        metodo_pago: { type: string }
+        fecha: { type: string, format: date-time }
+      required: [id, negocio_id, usuario_id, producto_id, tipo]
+
+    MovimientoCreate:
+      allOf:
+        - $ref: "#/components/schemas/Movimiento"
+
+    CierreCaja:
+      type: object
+      properties:
+        id: { type: integer }
+        negocio_id: { type: integer }
+        periodo: { type: string }
+        fecha_inicio: { type: string, format: date }
+        fecha_fin: { type: string, format: date }
+        total_bruto: { type: number, format: decimal }
+        total_capital: { type: number, format: decimal }
+        total_ganancia: { type: number, format: decimal }
+        total_efectivo: { type: number, format: decimal }
+        total_digital: { type: number, format: decimal }
+
+    ClienteVehiculo:
+      type: object
+      properties:
+        id: { type: integer }
+        negocio_id: { type: integer }
+        nombre_cliente: { type: string }
+        telefono: { type: string }
+        placa: { type: string }
+        marca_vehiculo: { type: string }
+        modelo_vehiculo: { type: string }
+        tipo_aceite: { type: string }
+        intervalo_meses: { type: integer }
+        fecha_ultimo_servicio: { type: string, format: date }
+        fecha_proximo_mantenimiento: { type: string, format: date }
+        activo: { type: boolean }
+
+    ColaSyncItem:
+      type: object
+      description: Item generado por el cliente (frontend) mientras estuvo offline.
+      properties:
+        id:
+          type: string
+          description: id generado en cliente (uuid), usado para idempotencia.
+        entidad: { type: string, description: "ej. movimiento, producto" }
+        payload:
+          type: object
+          additionalProperties: true
+        fecha_creacion: { type: string, format: date-time }
+      required: [id, entidad, payload]
+
+    ColaSyncResultado:
+      type: object
+      properties:
+        id: { type: string }
+        estado: { type: string, enum: [aplicado, error, duplicado] }
+        detalle: { type: string, nullable: true }
