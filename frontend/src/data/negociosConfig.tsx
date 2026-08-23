@@ -36,6 +36,10 @@ export interface NegocioTipoConfig {
   logo: (props: IconProps) => JSX.Element;
   servicios: AccionRapida[];
   productos: AccionRapida[];
+  /** Con qué módulos opcionales arranca el negocio de prueba — ver
+   * useNegocio. En producción esto lo decide quien instala la app, no el
+   * frontend; acá es solo el valor por defecto de la semilla de prueba. */
+  modulosActivosDefault: Record<string, boolean>;
 }
 
 export const NEGOCIOS_CONFIG = {
@@ -58,6 +62,7 @@ export const NEGOCIOS_CONFIG = {
       },
       { id: "accesorio", label: "Accesorio", icon: NutIcon, clasificacion: "producto" },
     ],
+    modulosActivosDefault: {},
   },
   lubricentro: {
     rubro: "lubricentro",
@@ -72,6 +77,7 @@ export const NEGOCIOS_CONFIG = {
       { id: "filtro-aire", label: "Filtro de aire", icon: FilterIcon, clasificacion: "producto" },
       { id: "silicona", label: "Silicona", icon: TubeIcon, clasificacion: "producto" },
     ],
+    modulosActivosDefault: { clientes_vehiculos: true },
   },
 } as const satisfies Record<string, NegocioTipoConfig>;
 

@@ -16,7 +16,7 @@ export function useNegocioDelTipo() {
 
   const negocioState = useNegocio(config.rubro, {
     nombre: config.nombreFallback,
-    modulos_activos: {},
+    modulos_activos: config.modulosActivosDefault,
     plan_estado: "activo",
     fecha_ultimo_pago: null,
     link_sunat: null,

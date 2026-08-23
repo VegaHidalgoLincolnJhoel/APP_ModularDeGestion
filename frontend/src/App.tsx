@@ -3,6 +3,7 @@ import Dashboard from "./pages/Dashboard";
 import Inicio from "./pages/Inicio";
 import MovimientoFlow from "./pages/MovimientoFlow";
 import CierreCaja from "./pages/CierreCaja";
+import ClientesVehiculos from "./pages/ClientesVehiculos";
 import Proximamente from "./pages/Proximamente";
 
 export default function App() {
@@ -18,7 +19,7 @@ export default function App() {
         <Route path="/:negocioTipo/stock" element={<Proximamente activeId="stock" titulo="Stock" />} />
         <Route path="/:negocioTipo/compras" element={<Proximamente activeId="compras" titulo="Compras" />} />
         <Route path="/:negocioTipo/sunat" element={<Proximamente activeId="sunat" titulo="SUNAT" />} />
-        <Route path="/:negocioTipo/clientes" element={<Proximamente activeId="clientes" titulo="Clientes" />} />
+        <Route path="/:negocioTipo/clientes" element={<ClientesVehiculos />} />
       </Routes>
     </BrowserRouter>
   );

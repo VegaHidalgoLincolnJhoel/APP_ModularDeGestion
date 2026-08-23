@@ -90,6 +90,23 @@ export interface Producto {
   activo: boolean;
 }
 
+export interface ClienteVehiculo {
+  id: number;
+  negocio_id: number;
+  nombre_cliente: string;
+  telefono: string | null;
+  placa: string | null;
+  marca_vehiculo: string | null;
+  modelo_vehiculo: string | null;
+  tipo_aceite: string | null;
+  intervalo_meses: number | null;
+  fecha_ultimo_servicio: string | null;
+  /** La calcula el servidor a partir de fecha_ultimo_servicio +
+   * intervalo_meses — nunca se manda al crear/editar. */
+  fecha_proximo_mantenimiento: string | null;
+  activo: boolean;
+}
+
 export interface Movimiento {
   id: number;
   negocio_id: number;
@@ -143,6 +160,13 @@ export const api = {
 
   listProductos: (negocioId: number) =>
     request<Producto[]>(`/negocios/${negocioId}/productos`),
+
+  /** 403 si el negocio no tiene modulos_activos.clientes_vehiculos — el
+   * caller debe chequear eso antes de llamar, no solo capturar el error. */
+  listClientesVehiculos: (negocioId: number, activo?: boolean) => {
+    const qs = activo === undefined ? "" : `?activo=${activo}`;
+    return request<ClienteVehiculo[]>(`/negocios/${negocioId}/clientes-vehiculos${qs}`);
+  },
 
   listMovimientos: (negocioId: number) =>
     request<Movimiento[]>(`/negocios/${negocioId}/movimientos`),

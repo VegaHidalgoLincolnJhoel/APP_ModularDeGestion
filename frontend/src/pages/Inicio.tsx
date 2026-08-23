@@ -5,6 +5,7 @@ import { AlertBanner } from "../components/AlertBanner";
 import { EmptyState } from "../components/EmptyState";
 import { Button } from "../components/Button";
 import { useProductos } from "../api/useProductos";
+import { useClientesVehiculos, estaVencido } from "../api/useClientesVehiculos";
 import { navItemsFor } from "../data/navigation";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { BoxIcon } from "../components/icons/Icons";
@@ -14,6 +15,8 @@ export default function Inicio() {
   const navigate = useNavigate();
   const { tipo, tipoValido, config, negocio, loading, crearDePrueba } = useNegocioDelTipo();
   const { productos } = useProductos(negocio?.id);
+  const moduloClientesActivo = Boolean(negocio?.modulos_activos.clientes_vehiculos);
+  const { clientes } = useClientesVehiculos(negocio?.id, moduloClientesActivo);
 
   if (!tipoValido) {
     return <Navigate to="/llanteria" replace />;
@@ -22,6 +25,7 @@ export default function Inicio() {
   const productoBajoMinimo = productos.find(
     (p) => p.activo && p.stock_actual < p.stock_minimo,
   );
+  const vencidos = clientes.filter(estaVencido);
 
   if (loading) return null;
 
@@ -52,6 +56,19 @@ export default function Inicio() {
       navItems={navItemsFor(tipo)}
       activeId="inicio"
     >
+      {vencidos.length > 0 && (
+        <AlertBanner
+          id="mantenimientos-vencidos"
+          title={`${vencidos.length} mantenimiento${vencidos.length > 1 ? "s" : ""} vencido${vencidos.length > 1 ? "s" : ""}`}
+          message="Clientes que ya deberían haber vuelto."
+          action={
+            <Button variant="accent" onClick={() => navigate(`/${tipo}/clientes`)}>
+              Ver clientes
+            </Button>
+          }
+        />
+      )}
+
       {productoBajoMinimo && (
         <AlertBanner
           id={`stock-bajo-${productoBajoMinimo.id}`}
