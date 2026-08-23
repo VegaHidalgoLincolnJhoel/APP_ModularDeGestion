@@ -1,0 +1,288 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.back {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.stepper {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0;
+  max-width: 420px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.step:last-child {
+  flex: 0;
+}
+
+.stepCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.hecho {
+  background: var(--success);
+  color: white;
+}
+
+.activo {
+  background: var(--producto);
+  color: var(--producto-ink);
+}
+
+.pendiente {
+  background: var(--card);
+  border: 2px solid var(--line);
+  color: var(--ink-faint);
+}
+
+.stepLabel {
+  position: absolute;
+  top: 34px;
+  left: 0;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.stepLine {
+  flex: 1;
+  height: 2px;
+  margin: 0 4px;
+  background: var(--line);
+}
+
+.stepLine.hecho {
+  background: var(--success);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 480px;
+}
+
+.muted {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.stepHint {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.optionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.optionRow:hover {
+  border-color: var(--producto);
+}
+
+.optionName {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.optionSub {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.optionPrice {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.linkBack {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.summaryChip {
+  background: var(--producto-soft);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.summaryName {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.priceCard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.strike {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-decoration: line-through;
+  text-decoration-color: var(--line);
+}
+
+.fieldLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+}
+
+.priceInput {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.priceInput span {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.priceInput input {
+  border: none;
+  background: none;
+  outline: none;
+  flex: 1;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.fieldHint {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.paymentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.paymentOption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.paymentOptionActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: white;
+}
+
+.warnBox {
+  display: flex;
+  gap: 12px;
+  background: var(--danger-soft);
+  border: 1px solid oklch(0.58 0.18 27 / 0.25);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  color: var(--danger);
+}
+
+.warnTitle {
+  margin: 0 0 2px;
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.warnActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 13px;
+}

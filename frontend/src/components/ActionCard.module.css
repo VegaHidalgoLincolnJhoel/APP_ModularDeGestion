@@ -1,0 +1,65 @@
+.card {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 18px 14px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  box-shadow: var(--shadow-card);
+}
+
+.servicio {
+  background: var(--servicio);
+  color: var(--servicio-ink);
+}
+
+.producto {
+  background: var(--producto);
+  color: var(--producto-ink);
+}
+
+.iconWrap {
+  display: flex;
+}
+
+.label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.subtitle {
+  font-size: 12.5px;
+  opacity: 0.75;
+  margin-top: -18px;
+}
+
+/* variante horizontal para escritorio, donde hay más aire */
+@media (min-width: 960px) {
+  .card {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 24px;
+  }
+
+  .iconWrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: oklch(1 0 0 / 0.25);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .label {
+    font-size: 17px;
+  }
+
+  .subtitle {
+    margin-top: 2px;
+    display: block;
+  }
+}

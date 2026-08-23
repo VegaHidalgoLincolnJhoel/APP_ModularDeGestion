@@ -1,0 +1,43 @@
+/**
+ * Tokens de diseño del sistema. Un solo lugar para color, tipografía y
+ * radios — todo lo demás (componentes, páginas) referencia estas variables
+ * en vez de valores sueltos, para que un cambio de paleta no implique tocar
+ * cincuenta archivos.
+ *
+ * Convención de color: ámbar = Servicio, azul = Producto, en todo el
+ * catálogo de negocios (ver docs/ARCHITECTURE.md). Sirve para que alguien
+ * que no lee mucho pueda ubicarse por color antes que por texto.
+ */
+:root {
+  --ink: oklch(0.22 0.02 260);
+  --ink-soft: oklch(0.46 0.02 260);
+  --ink-faint: oklch(0.64 0.01 260);
+  --paper: oklch(0.982 0.006 75);
+  --card: oklch(1 0 0);
+  --line: oklch(0.9 0.01 75);
+
+  --servicio: oklch(0.7 0.17 45);
+  --servicio-ink: oklch(0.32 0.1 45);
+  --producto: oklch(0.55 0.12 235);
+  --producto-ink: oklch(0.97 0.01 235);
+  --producto-soft: oklch(0.93 0.02 235);
+
+  --danger: oklch(0.58 0.18 27);
+  --danger-soft: oklch(0.95 0.05 30);
+  --success: oklch(0.62 0.14 155);
+  --success-soft: oklch(0.94 0.04 155);
+
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow-card:
+    0 1px 2px oklch(0.22 0.02 260 / 0.06),
+    0 10px 28px oklch(0.22 0.02 260 / 0.08);
+
+  --font-display: "Sora", system-ui, sans-serif;
+  --font-body: "Work Sans", system-ui, sans-serif;
+
+  /* por debajo de esto se ve la barra de navegación inferior; por
+     encima, la barra lateral. Ver AppShell. */
+  --breakpoint-desktop: 960px;
+}
