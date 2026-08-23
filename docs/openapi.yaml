@@ -175,6 +175,41 @@ paths:
         "409":
           description: Existe(n) producto(s) con nombre parecido; ver `candidatos` en el detalle.
 
+  /negocios/{negocioId}/productos/{productoId}/ajustar-stock:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+      - name: productoId
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [productos]
+      summary: Sumar o restar stock sin costo ni impacto en SUNAT
+      description: >
+        Complementa a registro-compras: no lleva costo_unitario ni queda
+        en el historial de compras, así que no está gateado por
+        modulo_rus_activo — sirve para reponer sin factura a mano o
+        corregir un conteo, en cualquier negocio.
+      operationId: ajustarStockProducto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductoAjusteStock"
+      responses:
+        "200":
+          description: Producto con el stock actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Producto"
+        "400":
+          description: delta es 0, o dejaría el stock en negativo
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /negocios/{negocioId}/movimientos:
     parameters:
       - $ref: "#/components/parameters/negocioId"
@@ -529,6 +564,14 @@ components:
     ProductoCreate:
       $ref: "#/components/schemas/ProductoBase"
       description: negocio_id no va en el body — viene del path /negocios/{negocioId}/productos.
+
+    ProductoAjusteStock:
+      type: object
+      properties:
+        delta:
+          type: integer
+          description: Positivo repone, negativo corrige. No puede ser 0.
+      required: [delta]
 
     MovimientoBase:
       type: object

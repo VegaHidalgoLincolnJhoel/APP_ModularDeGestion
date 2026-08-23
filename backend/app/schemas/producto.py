@@ -27,3 +27,17 @@ class Producto(ProductoBase):
 
     id: int
     negocio_id: int
+
+
+class ProductoAjusteStock(BaseModel):
+    """Suma o resta stock sin pasar por registro_compra.
+
+    A diferencia de RegistroCompra (que lleva costo_unitario y alimenta el
+    total comprado de SUNAT), esto es solo un ajuste de cantidad: reponer
+    sin factura a mano, o corregir un conteo mal hecho. Por eso no está
+    gateado por modulo_rus_activo — cualquier negocio necesita poder
+    corregir su stock, tenga o no activado el régimen RUS.
+    """
+
+    # Positivo repone, negativo corrige (ej. se contó de más por error).
+    delta: int
