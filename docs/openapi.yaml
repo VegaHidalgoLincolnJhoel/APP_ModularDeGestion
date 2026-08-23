@@ -86,6 +86,47 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /negocios/{negocioId}/usuarios:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+    get:
+      tags: [usuarios]
+      summary: Listar usuarios del negocio
+      description: >
+        Todavía no hay login individual por empleado: cada negocio arranca
+        con un único usuario, creado automáticamente al crear el negocio
+        (`POST /negocios`). Este endpoint es la forma de resolver el
+        `usuario_id` que pide `POST /movimientos`, sin hardcodearlo.
+      operationId: listUsuarios
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Usuario"
+    post:
+      tags: [usuarios]
+      summary: Crear usuario adicional
+      operationId: createUsuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UsuarioCreate"
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Usuario"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /negocios/{negocioId}/productos:
     parameters:
       - $ref: "#/components/parameters/negocioId"
@@ -105,7 +146,19 @@ paths:
     post:
       tags: [productos]
       summary: Crear producto
+      description: >
+        Regla transversal anti-duplicados: si el nombre se parece a uno ya
+        existente en el negocio, responde 409 con los candidatos en vez de
+        crear. El frontend reintenta con `confirmar_nuevo=true` si de
+        verdad es un ítem distinto.
       operationId: createProducto
+      parameters:
+        - name: confirmar_nuevo
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       requestBody:
         required: true
         content:
@@ -119,6 +172,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Producto"
+        "409":
+          description: Existe(n) producto(s) con nombre parecido; ver `candidatos` en el detalle.
 
   /negocios/{negocioId}/movimientos:
     parameters:
@@ -139,7 +194,19 @@ paths:
     post:
       tags: [movimientos]
       summary: Registrar movimiento
+      description: >
+        Si el producto tiene inventario y la venta lo deja bajo el mínimo
+        configurado, responde 409 en vez de aplicar el descuento — el
+        frontend debe mostrar el modal de confirmación y reintentar con
+        `confirmar_bajo_minimo=true`.
       operationId: createMovimiento
+      parameters:
+        - name: confirmar_bajo_minimo
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       requestBody:
         required: true
         content:
@@ -153,6 +220,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Movimiento"
+        "403":
+          description: >
+            cliente_vehiculo_id fue enviado pero el negocio no tiene el
+            módulo clientes_vehiculos activo.
+        "409":
+          description: >
+            Sin stock disponible, o la venta deja el producto bajo el
+            mínimo y falta confirmar_bajo_minimo=true.
 
   /negocios/{negocioId}/cierres-caja:
     parameters:
@@ -170,6 +245,29 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CierreCaja"
+    post:
+      tags: [cierres-caja]
+      summary: Cerrar caja para un rango de fechas
+      description: >
+        Suma los movimientos del negocio dentro de [fecha_inicio, fecha_fin]
+        y guarda el desglose (capital/ganancia, efectivo/digital) como un
+        registro fijo — no se recalcula si los movimientos cambian después.
+      operationId: createCierreCaja
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CierreCajaCreate"
+      responses:
+        "201":
+          description: Cierre de caja creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CierreCaja"
+        "400":
+          description: fecha_fin anterior a fecha_inicio
 
   /negocios/{negocioId}/clientes-vehiculos:
     parameters:
@@ -178,6 +276,13 @@ paths:
       tags: [clientes-vehiculos]
       summary: Listar clientes/vehículos (requiere módulo activo)
       operationId: listClientesVehiculos
+      parameters:
+        - name: activo
+          in: query
+          required: false
+          description: Filtra por activos o archivados. Sin este filtro, trae ambos.
+          schema:
+            type: boolean
       responses:
         "200":
           description: Lista de clientes/vehículos
@@ -189,6 +294,120 @@ paths:
                   $ref: "#/components/schemas/ClienteVehiculo"
         "403":
           description: Módulo no activo para este negocio
+    post:
+      tags: [clientes-vehiculos]
+      summary: Registrar cliente/vehículo para seguimiento
+      description: >
+        Se llama por separado del registro de la venta/servicio (que no
+        pide datos de cliente): esto es el paso opcional de "¿quiere
+        seguimiento?" al final de la atención. `fecha_proximo_mantenimiento`
+        se calcula en el servidor a partir de `fecha_ultimo_servicio` +
+        `intervalo_meses`.
+      operationId: createClienteVehiculo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClienteVehiculoCreate"
+      responses:
+        "201":
+          description: Cliente/vehículo creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClienteVehiculo"
+        "403":
+          description: Módulo no activo para este negocio
+
+  /negocios/{negocioId}/clientes-vehiculos/{clienteVehiculoId}:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+      - name: clienteVehiculoId
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [clientes-vehiculos]
+      summary: Editar cliente/vehículo, o archivarlo con activo=false
+      operationId: updateClienteVehiculo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClienteVehiculoUpdate"
+      responses:
+        "200":
+          description: Cliente/vehículo actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClienteVehiculo"
+        "403":
+          description: Módulo no activo para este negocio
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [clientes-vehiculos]
+      summary: Eliminar cliente/vehículo por completo
+      description: >
+        Distinto de archivar (PATCH activo=false). Si tiene movimientos o
+        notificaciones asociadas, responde 409 sugiriendo archivar.
+      operationId: deleteClienteVehiculo
+      responses:
+        "204":
+          description: Eliminado
+        "403":
+          description: Módulo no activo para este negocio
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Tiene movimientos/notificaciones asociadas; archivar en vez de eliminar.
+
+  /negocios/{negocioId}/registro-compras:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+    get:
+      tags: [registro-compras]
+      summary: Listar registros de compra/reposición (requiere módulo RUS activo)
+      operationId: listRegistroCompras
+      responses:
+        "200":
+          description: Lista de registros de compra
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegistroCompra"
+        "403":
+          description: Módulo RUS no activo para este negocio
+    post:
+      tags: [registro-compras]
+      summary: Registrar compra/reposición de stock
+      description: Suma `cantidad` al stock_actual del producto indicado.
+      operationId: createRegistroCompra
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistroCompraCreate"
+      responses:
+        "201":
+          description: Registro de compra creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegistroCompra"
+        "400":
+          description: cantidad inválida (debe ser mayor a 0)
+        "403":
+          description: Módulo RUS no activo para este negocio
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /negocios/{negocioId}/sync:
     parameters:
@@ -264,6 +483,25 @@ components:
     NegocioCreate:
       $ref: "#/components/schemas/NegocioBase"
 
+    UsuarioBase:
+      type: object
+      properties:
+        nombre: { type: string }
+        rol: { type: string }
+      required: [nombre, rol]
+
+    UsuarioCreate:
+      $ref: "#/components/schemas/UsuarioBase"
+
+    Usuario:
+      allOf:
+        - $ref: "#/components/schemas/UsuarioBase"
+        - type: object
+          properties:
+            id: { type: integer }
+            negocio_id: { type: integer }
+          required: [id, negocio_id]
+
     ProductoBase:
       type: object
       properties:
@@ -319,6 +557,16 @@ components:
       $ref: "#/components/schemas/MovimientoBase"
       description: negocio_id no va en el body — viene del path /negocios/{negocioId}/movimientos.
 
+    CierreCajaCreate:
+      type: object
+      properties:
+        periodo:
+          type: string
+          description: "Etiqueta libre, ej. diario, semanal, mensual."
+        fecha_inicio: { type: string, format: date }
+        fecha_fin: { type: string, format: date }
+      required: [periodo, fecha_inicio, fecha_fin]
+
     CierreCaja:
       type: object
       properties:
@@ -333,11 +581,9 @@ components:
         total_efectivo: { type: string, format: decimal }
         total_digital: { type: string, format: decimal }
 
-    ClienteVehiculo:
+    ClienteVehiculoBase:
       type: object
       properties:
-        id: { type: integer }
-        negocio_id: { type: integer }
         nombre_cliente: { type: string }
         telefono: { type: string, nullable: true }
         placa: { type: string, nullable: true }
@@ -346,8 +592,62 @@ components:
         tipo_aceite: { type: string, nullable: true }
         intervalo_meses: { type: integer, nullable: true }
         fecha_ultimo_servicio: { type: string, format: date, nullable: true }
-        fecha_proximo_mantenimiento: { type: string, format: date, nullable: true }
+      required: [nombre_cliente]
+
+    ClienteVehiculoCreate:
+      $ref: "#/components/schemas/ClienteVehiculoBase"
+
+    ClienteVehiculoUpdate:
+      type: object
+      description: Todos los campos opcionales; manda solo los que cambian.
+      properties:
+        nombre_cliente: { type: string }
+        telefono: { type: string, nullable: true }
+        placa: { type: string, nullable: true }
+        marca_vehiculo: { type: string, nullable: true }
+        modelo_vehiculo: { type: string, nullable: true }
+        tipo_aceite: { type: string, nullable: true }
+        intervalo_meses: { type: integer, nullable: true }
+        fecha_ultimo_servicio: { type: string, format: date, nullable: true }
         activo: { type: boolean }
+
+    ClienteVehiculo:
+      allOf:
+        - $ref: "#/components/schemas/ClienteVehiculoBase"
+        - type: object
+          properties:
+            id: { type: integer }
+            negocio_id: { type: integer }
+            fecha_proximo_mantenimiento:
+              type: string
+              format: date
+              nullable: true
+              description: Calculado por el servidor; no se envía al crear/editar.
+            activo: { type: boolean }
+          required: [id, negocio_id, activo]
+
+    RegistroCompraCreate:
+      type: object
+      properties:
+        producto_id: { type: integer }
+        cantidad: { type: integer, minimum: 1 }
+        costo_unitario: { type: string, format: decimal }
+        fecha:
+          type: string
+          format: date
+          nullable: true
+          description: Si se omite, se usa la fecha del día.
+      required: [producto_id, cantidad, costo_unitario]
+
+    RegistroCompra:
+      type: object
+      properties:
+        id: { type: integer }
+        negocio_id: { type: integer }
+        producto_id: { type: integer }
+        cantidad: { type: integer }
+        costo_unitario: { type: string, format: decimal }
+        fecha: { type: string, format: date }
 
     ColaSyncItem:
       type: object
