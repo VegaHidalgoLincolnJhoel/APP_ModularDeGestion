@@ -15,11 +15,26 @@ Pasos para quien lo despliegue (no requiere nada de código):
 2. Copiar el connection string (formato `postgresql://...`).
 3. Ese valor va como `DATABASE_URL` del backend — ver sección siguiente.
 
-## 2. Backend
+## 2. Backend — Render o Railway
 
-Ver `../backend/README.md` para el detalle específico (Dockerfile,
-variables de entorno, cómo correr las migraciones en el despliegue). *Pendiente
-de completar por el lado de backend.*
+Ambos funcionan igual para esto: detectan el `backend/Dockerfile` y
+despliegan el contenedor directo, sin build manual.
+
+1. Crear el servicio apuntando a este repo, carpeta raíz `backend/`
+   (ahí vive el `Dockerfile`).
+2. Variables de entorno del servicio:
+   - `DATABASE_URL`: el connection string de Neon del paso 1.
+   - `CORS_ORIGINS`: el dominio de Cloudflare Pages del paso 3. Como
+     todavía no existe en este punto del orden de despliegue, se puede
+     arrancar con un valor provisorio y actualizarlo (sin rebuild, ver
+     `../backend/README.md#despliegue`) apenas se tenga la URL real.
+   - `ENV=production`.
+3. Las migraciones corren solas al iniciar el contenedor — no hay paso
+   manual contra Neon. Detalle y el límite de este approach (una sola
+   instancia) en `../backend/README.md#despliegue`.
+4. Copiar la URL pública que asigne la plataforma (`https://...onrender.com`
+   o `https://....up.railway.app`) — es el valor de `VITE_API_URL` que
+   necesita el frontend para el paso 3.
 
 ## 3. Frontend — Cloudflare Pages
 
