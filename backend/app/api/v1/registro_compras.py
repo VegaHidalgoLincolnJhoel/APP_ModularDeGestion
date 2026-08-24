@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import verificar_acceso_negocio
 from app.core.modulos import verificar_modulo_rus_activo
 from app.db.session import get_db
 from app.models.negocio import Negocio as NegocioModel
@@ -10,7 +11,11 @@ from app.models.producto import Producto as ProductoModel
 from app.models.registro_compra import RegistroCompra as RegistroCompraModel
 from app.schemas.registro_compra import RegistroCompra, RegistroCompraCreate
 
-router = APIRouter(prefix="/negocios/{negocio_id}/registro-compras", tags=["registro-compras"])
+router = APIRouter(
+    prefix="/negocios/{negocio_id}/registro-compras",
+    tags=["registro-compras"],
+    dependencies=[Depends(verificar_acceso_negocio)],
+)
 
 
 def _get_negocio_con_rus(negocio_id: int, db: Session) -> NegocioModel:

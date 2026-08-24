@@ -5,12 +5,23 @@ info:
     Contrato de la API para el sistema de gestión modular multi-negocio.
     Fuente de verdad compartida entre frontend y backend — ver
     docs/ARCHITECTURE.md para el contexto de dominio.
+
+    Auth: todo endpoint requiere `Authorization: Bearer <token>` (ver
+    POST /auth/login), excepto /health y el login mismo. El negocio_id de
+    cualquier ruta /negocios/{negocioId}/... se valida contra el negocio_id
+    del token — no alcanza con mandar un negocio_id distinto en la URL para
+    operar sobre otro negocio. Un usuario con rol admin no está atado a
+    ningún negocio y puede operar sobre cualquiera; el resto de roles
+    (hoy solo "dueño") solo sobre el suyo. Devuelve 401 sin token o con uno
+    inválido/expirado, 403 con un token válido pero sin permiso sobre ese
+    negocio_id o sin rol admin donde se requiere.
   version: 0.1.0
 servers:
   - url: http://localhost:8000/api/v1
     description: Desarrollo local
 
 tags:
+  - name: auth
   - name: negocios
   - name: usuarios
   - name: productos
@@ -20,11 +31,15 @@ tags:
   - name: registro-compras
   - name: sync
 
+security:
+  - bearerAuth: []
+
 paths:
   /health:
     get:
       summary: Health check
       operationId: healthCheck
+      security: []
       responses:
         "200":
           description: OK
@@ -37,10 +52,39 @@ paths:
                     type: string
                     example: ok
 
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Login
+      description: >
+        Único endpoint (además de /health) que no requiere token. El
+        username es global — no se busca por negocio, porque en el momento
+        del login todavía no se sabe a qué negocio pertenece el usuario;
+        el negocio_id de la respuesta es justamente cómo se entera el
+        cliente. Un admin no tiene negocio_id (null).
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /negocios:
     get:
       tags: [negocios]
       summary: Listar negocios
+      description: Admin-only. Un usuario de negocio no ve la lista completa.
       operationId: listNegocios
       responses:
         "200":
@@ -51,9 +95,17 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Negocio"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
     post:
       tags: [negocios]
       summary: Crear negocio
+      description: >
+        Admin-only. Crea el negocio y su primer usuario (con credenciales
+        propias) en el mismo paso — es el endpoint que consume el panel de
+        admin para dar de alta un negocio nuevo.
       operationId: createNegocio
       requestBody:
         required: true
@@ -68,6 +120,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Negocio"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /negocios/{negocioId}:
     parameters:
@@ -116,10 +172,10 @@ paths:
       tags: [usuarios]
       summary: Listar usuarios del negocio
       description: >
-        Todavía no hay login individual por empleado: cada negocio arranca
-        con un único usuario, creado automáticamente al crear el negocio
-        (`POST /negocios`). Este endpoint es la forma de resolver el
-        `usuario_id` que pide `POST /movimientos`, sin hardcodearlo.
+        Cada negocio arranca con un único usuario, creado en el mismo paso
+        que el negocio (`POST /negocios`, admin-only). Este endpoint sirve
+        para sumar más usuarios al negocio, o para resolver el `usuario_id`
+        que pide `POST /movimientos` sin hardcodearlo.
       operationId: listUsuarios
       responses:
         "200":
@@ -503,6 +559,12 @@ components:
       schema:
         type: integer
 
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   responses:
     NotFound:
       description: No encontrado
@@ -513,8 +575,46 @@ components:
             properties:
               detail:
                 type: string
+    Unauthorized:
+      description: Falta el token, o es inválido/expiró
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+    Forbidden:
+      description: Token válido, pero sin permiso sobre este negocio (o falta rol admin)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
 
   schemas:
+    LoginRequest:
+      type: object
+      properties:
+        username: { type: string }
+        password: { type: string }
+      required: [username, password]
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, default: bearer }
+        rol: { type: string }
+        negocio_id:
+          type: integer
+          nullable: true
+          description: null si el usuario es admin (no está atado a un solo negocio).
+        nombre: { type: string }
+      required: [access_token, token_type, rol, negocio_id, nombre]
+
     NegocioBase:
       type: object
       properties:
@@ -539,7 +639,17 @@ components:
           required: [id]
 
     NegocioCreate:
-      $ref: "#/components/schemas/NegocioBase"
+      allOf:
+        - $ref: "#/components/schemas/NegocioBase"
+        - type: object
+          properties:
+            usuario_inicial:
+              allOf:
+                - $ref: "#/components/schemas/UsuarioCreate"
+              description: >
+                Primer usuario del negocio (con sus credenciales). Sin esto
+                el negocio quedaría creado pero inaccesible para siempre.
+          required: [usuario_inicial]
 
     NegocioUpdate:
       type: object
@@ -561,11 +671,21 @@ components:
       type: object
       properties:
         nombre: { type: string }
-        rol: { type: string }
-      required: [nombre, rol]
+        rol:
+          type: string
+          description: '"admin" (sin negocio_id, cross-tenant) o cualquier otro valor atado a un negocio (hoy solo "dueño").'
+        username: { type: string }
+      required: [nombre, rol, username]
 
     UsuarioCreate:
-      $ref: "#/components/schemas/UsuarioBase"
+      allOf:
+        - $ref: "#/components/schemas/UsuarioBase"
+        - type: object
+          properties:
+            password:
+              type: string
+              description: Plaintext solo de paso — el backend la hashea y nunca la devuelve.
+          required: [password]
 
     Usuario:
       allOf:
@@ -573,7 +693,10 @@ components:
         - type: object
           properties:
             id: { type: integer }
-            negocio_id: { type: integer }
+            negocio_id:
+              type: integer
+              nullable: true
+              description: null si es admin.
           required: [id, negocio_id]
 
     ProductoBase:

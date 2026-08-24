@@ -105,7 +105,9 @@ Entidades principales: `negocio`, `usuario`, `producto`, `movimiento`
 - Integración SUNAT vía API (Nubefact/Facturador) — futuro.
 - Detección automática de pagos Yape — futuro.
 - Kilometraje como criterio de mantenimiento — descartado, solo por tiempo.
-- Login individual por empleado — futuro, hoy no hay roles/usuarios separados.
+- Login granular por empleado (más roles que admin/negocio, permisos finos
+  dentro de un mismo negocio) — futuro. Login con JWT y roles admin/negocio
+  ya está implementado (ver `backend/app/core/auth.py`).
 - Modo offline (fase 2, no MVP).
 
 ---

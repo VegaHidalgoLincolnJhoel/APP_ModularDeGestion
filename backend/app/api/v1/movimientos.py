@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import verificar_acceso_negocio
 from app.core.contabilidad import es_capital
 from app.core.modulos import MODULO_CLIENTES_VEHICULOS, verificar_modulo_activo
 from app.db.session import get_db
@@ -11,7 +12,11 @@ from app.models.producto import Producto as ProductoModel
 from app.models.usuario import Usuario as UsuarioModel
 from app.schemas.movimiento import Movimiento, MovimientoCreate
 
-router = APIRouter(prefix="/negocios/{negocio_id}/movimientos", tags=["movimientos"])
+router = APIRouter(
+    prefix="/negocios/{negocio_id}/movimientos",
+    tags=["movimientos"],
+    dependencies=[Depends(verificar_acceso_negocio)],
+)
 
 
 def _get_negocio_o_404(negocio_id: int, db: Session) -> NegocioModel:

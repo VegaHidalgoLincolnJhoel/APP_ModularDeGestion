@@ -32,6 +32,12 @@ tests/
 - Toda tabla que cuelga de un negocio lleva `negocio_id` con FK a
   `negocios.id` — es la base del multi-tenant. Ningún query de una entidad
   con `negocio_id` debe ejecutarse sin filtrar por ese negocio.
+- El `negocio_id` de un endpoint nunca sale del path/body sin más: todo
+  router bajo `/negocios/{negocio_id}/...` lleva la dependency
+  `verificar_acceso_negocio` (`app/core/auth.py`), que exige un JWT válido
+  y que el `negocio_id` del token coincida con el de la URL (salvo rol
+  `admin`, que puede operar sobre cualquiera). Solo `/health` y
+  `/auth/login` quedan sin auth.
 - Antes de exponer un endpoint de un módulo opcional
   (`clientes_vehiculos`, `registro_compras`, notificaciones WhatsApp),
   valida `modulos_activos` / `modulo_rus_activo` del negocio y responde
@@ -51,7 +57,11 @@ cp .env.example .env   # ajustar DATABASE_URL
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 alembic upgrade head
+python scripts/seed_admin_y_negocios.py   # crea admin + usuario de cada negocio real (una sola vez)
 uvicorn app.main:app --reload
 ```
 
-Docs interactivas en `http://localhost:8000/docs` una vez levantado.
+Docs interactivas en `http://localhost:8000/docs` una vez levantado. Casi
+todo requiere `Authorization: Bearer <token>` — conseguir el token con
+`POST /api/v1/auth/login` usando alguna de las credenciales que imprimió
+el seed.

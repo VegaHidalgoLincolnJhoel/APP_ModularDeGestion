@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import UsuarioAutenticado, verificar_acceso_negocio, verificar_admin
+from app.core.security import hash_password
 from app.db.session import get_db
 from app.models.negocio import Negocio as NegocioModel
 from app.models.usuario import Usuario as UsuarioModel
@@ -9,26 +11,33 @@ from app.schemas.negocio import Negocio, NegocioCreate, NegocioUpdate
 router = APIRouter(prefix="/negocios", tags=["negocios"])
 
 
-@router.get("", response_model=list[Negocio])
+@router.get("", response_model=list[Negocio], dependencies=[Depends(verificar_admin)])
 def list_negocios(db: Session = Depends(get_db)):
+    """Admin-only: un usuario de negocio no tiene motivo para ver la lista
+    completa, y con negocio_id viniendo directo del login tampoco lo
+    necesita para nada (antes se usaba para "adivinar" cuál era el suyo)."""
     return db.query(NegocioModel).all()
 
 
-@router.post("", response_model=Negocio, status_code=201)
+@router.post("", response_model=Negocio, status_code=201, dependencies=[Depends(verificar_admin)])
 def create_negocio(payload: NegocioCreate, db: Session = Depends(get_db)):
-    """Crea el negocio y le deja sembrado un usuario por defecto.
-
-    Todavía no hay login individual por empleado (fuera de alcance por
-    ahora, ver CLAUDE.md raíz), pero movimientos.usuario_id es obligatorio
-    — así el negocio siempre tiene al menos un usuario válido para operar
-    sin que el frontend tenga que adivinar o hardcodear un id.
+    """Alta de negocio nuevo, admin-only — es el endpoint que va a consumir
+    el panel de admin. Crea el negocio y su primer usuario en la misma
+    transacción: un negocio sin ningún usuario con credenciales quedaría
+    inaccesible para siempre, no tendría sentido dejarlo a medio crear.
     """
-    negocio = NegocioModel(**payload.model_dump())
+    datos_negocio = payload.model_dump(exclude={"usuario_inicial"})
+    negocio = NegocioModel(**datos_negocio)
     db.add(negocio)
     db.flush()  # asigna negocio.id sin cerrar la transacción todavía
 
-    usuario_por_defecto = UsuarioModel(negocio_id=negocio.id, nombre="Usuario principal", rol="dueño")
-    db.add(usuario_por_defecto)
+    datos_usuario = payload.usuario_inicial.model_dump(exclude={"password"})
+    usuario = UsuarioModel(
+        negocio_id=negocio.id,
+        password_hash=hash_password(payload.usuario_inicial.password),
+        **datos_usuario,
+    )
+    db.add(usuario)
 
     db.commit()
     db.refresh(negocio)
@@ -36,7 +45,11 @@ def create_negocio(payload: NegocioCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{negocio_id}", response_model=Negocio)
-def get_negocio(negocio_id: int, db: Session = Depends(get_db)):
+def get_negocio(
+    negocio_id: int,
+    db: Session = Depends(get_db),
+    _usuario: UsuarioAutenticado = Depends(verificar_acceso_negocio),
+):
     negocio = db.get(NegocioModel, negocio_id)
     if negocio is None:
         raise HTTPException(status_code=404, detail="Negocio no encontrado")
@@ -44,14 +57,17 @@ def get_negocio(negocio_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{negocio_id}", response_model=Negocio)
-def update_negocio(negocio_id: int, payload: NegocioUpdate, db: Session = Depends(get_db)):
+def update_negocio(
+    negocio_id: int,
+    payload: NegocioUpdate,
+    db: Session = Depends(get_db),
+    _usuario: UsuarioAutenticado = Depends(verificar_acceso_negocio),
+):
     """Edita configuración del negocio (pensado sobre todo para link_sunat).
 
-    No se toca modulos_activos/modulo_rus_activo/plan_estado desde acá con
-    ninguna validación especial todavía — hoy solo hay una vecina y un papá,
-    así que activar/desactivar módulos es manual y de confianza. Si esto
-    se vuelve self-service para más negocios, va a necesitar sus propias
-    reglas (ej. no bajar de plan con deuda pendiente).
+    No hace falta ser admin: el propio negocio puede editar su config
+    (ej. la vecina cargando su link de pago SUNAT), verificar_acceso_negocio
+    ya garantiza que solo toque su propio negocio_id.
     """
     negocio = db.get(NegocioModel, negocio_id)
     if negocio is None:

@@ -10,12 +10,17 @@ carpeta para las reglas de trabajo, y `../docs/ARCHITECTURE.md` /
 cp .env.example .env      # ajustar DATABASE_URL a tu Postgres local
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-alembic upgrade head      # aplica la migración inicial (alembic/versions/)
+alembic upgrade head       # aplica todas las migraciones (alembic/versions/)
+python scripts/seed_admin_y_negocios.py   # crea admin + usuario de cada negocio real
 uvicorn app.main:app --reload
 ```
 
 - API: http://localhost:8000/api/v1
 - Docs interactivas (Swagger): http://localhost:8000/docs
+- Casi todo requiere login: `POST /api/v1/auth/login` con alguna de las
+  credenciales que imprimió el seed, y mandar el `access_token` de la
+  respuesta como header `Authorization: Bearer <token>` en el resto de
+  requests.
 
 ## Tests
 
@@ -31,10 +36,12 @@ MVP completo: `negocios`, `usuarios`, `productos` (con anti-duplicados y
 `movimiento`) — todos con su modelo, schema y router siguiendo el mismo
 patrón, documentados en `../docs/openapi.yaml`.
 
-Pendiente de definir: autenticación/autorización (login, sesión por
-negocio y rol de usuario) — hoy cualquiera con la URL de la API puede
-leer/escribir cualquier negocio. Aceptable por ahora con dos usuarios de
-confianza, pero hay que volver sobre esto antes de sumar más clientes.
+Auth: login con JWT (`POST /auth/login`), roles `admin` (cross-tenant,
+crea negocios nuevos) y de negocio (atado a su `negocio_id`). Todo
+endpoint bajo `/negocios/{negocio_id}/...` valida que el token sea de ese
+negocio o de un admin — ver `app/core/auth.py`. Pendiente real: no hay
+refresh token (el access token dura 7 días y hay que re-loguearse al
+vencer) ni recuperación de contraseña.
 
 Cuando agregues/edites un modelo, generá la migración correspondiente con
 `alembic revision --autogenerate -m "..."` y commiteala junto con el

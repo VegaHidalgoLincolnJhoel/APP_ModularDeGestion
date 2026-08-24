@@ -2,6 +2,8 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.usuario import UsuarioCreate
+
 
 class NegocioBase(BaseModel):
     nombre: str
@@ -14,7 +16,10 @@ class NegocioBase(BaseModel):
 
 
 class NegocioCreate(NegocioBase):
-    pass
+    # Alta de negocio es admin-only y crea el primer usuario del negocio en
+    # el mismo paso — sin esto el negocio quedaría creado pero sin ninguna
+    # credencial con la que entrar. UsuarioCreate ya trae username/password.
+    usuario_inicial: UsuarioCreate
 
 
 class NegocioUpdate(BaseModel):

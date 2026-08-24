@@ -4,6 +4,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import verificar_acceso_negocio
 from app.core.contabilidad import es_capital
 from app.db.session import get_db
 from app.models.cierre_caja import CierreCaja as CierreCajaModel
@@ -12,7 +13,11 @@ from app.models.negocio import Negocio as NegocioModel
 from app.models.producto import Producto as ProductoModel
 from app.schemas.cierre_caja import CierreCaja, CierreCajaCreate
 
-router = APIRouter(prefix="/negocios/{negocio_id}/cierres-caja", tags=["cierres-caja"])
+router = APIRouter(
+    prefix="/negocios/{negocio_id}/cierres-caja",
+    tags=["cierres-caja"],
+    dependencies=[Depends(verificar_acceso_negocio)],
+)
 
 METODO_EFECTIVO = "efectivo"
 METODO_DIGITAL = "digital"

@@ -24,6 +24,10 @@ despliegan el contenedor directo, sin build manual.
    (ahí vive el `Dockerfile`).
 2. Variables de entorno del servicio:
    - `DATABASE_URL`: el connection string de Neon del paso 1.
+   - `JWT_SECRET_KEY`: generar uno propio para producción, nunca reusar el
+     default de desarrollo (`python -c "import secrets; print(secrets.token_urlsafe(48))"`).
+     Firma todos los tokens de sesión — si se filtra o queda con el default,
+     cualquiera puede forjar un token válido.
    - `CORS_ORIGINS`: el dominio de Cloudflare Pages del paso 3. Como
      todavía no existe en este punto del orden de despliegue, se puede
      arrancar con un valor provisorio y actualizarlo (sin rebuild, ver
@@ -32,7 +36,11 @@ despliegan el contenedor directo, sin build manual.
 3. Las migraciones corren solas al iniciar el contenedor — no hay paso
    manual contra Neon. Detalle y el límite de este approach (una sola
    instancia) en `../backend/README.md#despliegue`.
-4. Copiar la URL pública que asigne la plataforma (`https://...onrender.com`
+4. Correr una vez `python scripts/seed_admin_y_negocios.py` contra la DB
+   de Neon (con `DATABASE_URL` apuntando ahí) para crear el admin y las
+   credenciales de los dos negocios reales — guardar las contraseñas que
+   imprime, no se vuelven a mostrar.
+5. Copiar la URL pública que asigne la plataforma (`https://...onrender.com`
    o `https://....up.railway.app`) — es el valor de `VITE_API_URL` que
    necesita el frontend para el paso 3.
 
@@ -43,8 +51,8 @@ paso completo.
 
 ## Pendiente transversal (no bloquea el primer deploy)
 
-- Autenticación: hoy no hay ninguna — cualquiera con la URL de la API
-  puede leer/escribir cualquier negocio. Aceptable a corto plazo con dos
-  usuarios de confianza (papá y vecina), pero hay que volver sobre esto.
+- Auth: login con JWT ya implementado (`app/core/auth.py`), pero sin
+  refresh token ni recuperación de contraseña — si alguien pierde la
+  suya, la única salida hoy es que un admin la recree a mano.
 - CORS del backend debe incluir el dominio real de Cloudflare Pages una
   vez que exista (`*.pages.dev` o el dominio propio), no solo `localhost`.

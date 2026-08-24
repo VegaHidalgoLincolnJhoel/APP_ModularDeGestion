@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.auth import verificar_acceso_negocio
 from app.core.mantenimiento import calcular_proximo_mantenimiento
 from app.core.modulos import MODULO_CLIENTES_VEHICULOS, verificar_modulo_activo
 from app.db.session import get_db
@@ -13,7 +14,11 @@ from app.schemas.cliente_vehiculo import (
     ClienteVehiculoUpdate,
 )
 
-router = APIRouter(prefix="/negocios/{negocio_id}/clientes-vehiculos", tags=["clientes-vehiculos"])
+router = APIRouter(
+    prefix="/negocios/{negocio_id}/clientes-vehiculos",
+    tags=["clientes-vehiculos"],
+    dependencies=[Depends(verificar_acceso_negocio)],
+)
 
 
 def _get_negocio_con_modulo(negocio_id: int, db: Session) -> NegocioModel:

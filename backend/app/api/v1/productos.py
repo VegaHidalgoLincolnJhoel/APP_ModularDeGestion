@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import verificar_acceso_negocio
 from app.core.duplicados import son_parecidos
 from app.db.session import get_db
 from app.models.producto import Producto as ProductoModel
 from app.schemas.producto import Producto, ProductoAjusteStock, ProductoCreate
 
-router = APIRouter(prefix="/negocios/{negocio_id}/productos", tags=["productos"])
+router = APIRouter(
+    prefix="/negocios/{negocio_id}/productos",
+    tags=["productos"],
+    dependencies=[Depends(verificar_acceso_negocio)],
+)
 
 
 def _get_producto_o_404(negocio_id: int, producto_id: int, db: Session) -> ProductoModel:

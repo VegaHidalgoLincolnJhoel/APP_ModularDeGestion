@@ -3,13 +3,18 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.api.v1.movimientos import _crear_movimiento
+from app.core.auth import verificar_acceso_negocio
 from app.db.session import get_db
 from app.models.cola_sync import ColaSync as ColaSyncModel
 from app.models.negocio import Negocio as NegocioModel
 from app.schemas.cola_sync import ColaSyncItem, ColaSyncResultado
 from app.schemas.movimiento import MovimientoCreate
 
-router = APIRouter(prefix="/negocios/{negocio_id}/sync", tags=["sync"])
+router = APIRouter(
+    prefix="/negocios/{negocio_id}/sync",
+    tags=["sync"],
+    dependencies=[Depends(verificar_acceso_negocio)],
+)
 
 # Entidades que ya saben aplicarse desde la cola offline. El resto del
 # núcleo (producto, cliente_vehiculo, registro_compra) se va sumando acá a

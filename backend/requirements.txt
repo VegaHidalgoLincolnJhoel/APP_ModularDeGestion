@@ -6,6 +6,8 @@ psycopg2-binary==2.9.9
 pydantic==2.9.2
 pydantic-settings==2.5.2
 python-dotenv==1.0.1
+pyjwt==2.9.0
+bcrypt==4.2.0
 
 # dev / test
 pytest==8.3.3
