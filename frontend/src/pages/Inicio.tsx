@@ -8,11 +8,13 @@ import { useProductos } from "../api/useProductos";
 import { useClientesVehiculos, estaVencido } from "../api/useClientesVehiculos";
 import { navItemsFor } from "../data/navigation";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
+import { useAuth } from "../hooks/useAuth";
 import { BoxIcon } from "../components/icons/Icons";
 import styles from "./Inicio.module.css";
 
 export default function Inicio() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const { tipo, tipoValido, config, negocio, loading, crearDePrueba } = useNegocioDelTipo();
   const { productos } = useProductos(negocio?.id);
   const moduloClientesActivo = Boolean(negocio?.modulos_activos.clientes_vehiculos);
@@ -41,8 +43,14 @@ export default function Inicio() {
         <EmptyState
           icon={<config.logo size={24} />}
           title={`Todavía no hay un negocio de "${config.rubro}" registrado`}
-          message="Se crea una vez por instalación. Podés generarlo ahora con datos de ejemplo para seguir probando la app."
-          action={<Button onClick={() => crearDePrueba()}>Crear negocio de prueba</Button>}
+          message={
+            isAdmin
+              ? "Se crea una vez por instalación. Podés generarlo ahora con datos de ejemplo para seguir probando la app."
+              : "Este negocio todavía no está dado de alta. Un administrador tiene que crearlo."
+          }
+          action={
+            isAdmin ? <Button onClick={() => crearDePrueba()}>Crear negocio de prueba</Button> : undefined
+          }
         />
       </AppShell>
     );

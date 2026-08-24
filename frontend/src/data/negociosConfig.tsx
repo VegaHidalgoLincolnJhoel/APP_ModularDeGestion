@@ -96,6 +96,15 @@ export function esNegocioTipo(valor: string | undefined): valor is NegocioTipo {
   return valor !== undefined && valor in NEGOCIOS_CONFIG;
 }
 
+/** El negocio real de la sesión trae su `rubro` desde la API — esto
+ * resuelve a qué tipo de pantalla corresponde, para saber a dónde
+ * redirigir después del login sin tener que listar nada. */
+export function tipoDesdeRubro(rubro: string): NegocioTipo | undefined {
+  return (Object.keys(NEGOCIOS_CONFIG) as NegocioTipo[]).find(
+    (tipo) => NEGOCIOS_CONFIG[tipo].rubro.toLowerCase() === rubro.toLowerCase(),
+  );
+}
+
 export function buscarAccion(tipo: NegocioTipo, accionId: string): AccionRapida | undefined {
   const config = NEGOCIOS_CONFIG[tipo];
   return [...config.servicios, ...config.productos].find((a) => a.id === accionId);

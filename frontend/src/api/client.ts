@@ -10,6 +10,41 @@
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
+// --- sesión: token en localStorage + aviso global cuando el backend
+// rechaza por 401. Es un módulo plano (no un componente), así que no
+// puede usar useNavigate directo — quien quiera reaccionar a un 401
+// (típicamente el AuthProvider, que sí vive dentro del Router) se
+// suscribe con onUnauthorized.
+const TOKEN_KEY = "gestion:token";
+
+export function getToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setToken(token: string | null): void {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // localStorage puede fallar (modo privado, cuota) — no hay mucho más
+    // que hacer, la sesión simplemente no persiste entre recargas.
+  }
+}
+
+type UnauthorizedListener = () => void;
+let unauthorizedListeners: UnauthorizedListener[] = [];
+
+export function onUnauthorized(listener: UnauthorizedListener): () => void {
+  unauthorizedListeners.push(listener);
+  return () => {
+    unauthorizedListeners = unauthorizedListeners.filter((l) => l !== listener);
+  };
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -28,8 +63,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (init?.headers) {
     new Headers(init.headers).forEach((value, key) => headers.set(key, value));
   }
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+
+  if (res.status === 401) {
+    // Token ausente, vencido o inválido — se limpia y se avisa; el
+    // AuthProvider decide qué hacer (redirigir a /login), acá no se sabe
+    // de rutas.
+    setToken(null);
+    unauthorizedListeners.forEach((listener) => listener());
+  }
 
   if (!res.ok) {
     const body = await res.text();
@@ -180,7 +225,18 @@ export interface RegistroCompraCreate {
  * reintentar con confirmarBajoMinimo: true. */
 export class StockBajoMinimoError extends ApiError {}
 
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  rol: string;
+  negocio_id: number | null;
+  nombre: string;
+}
+
 export const api = {
+  login: (username: string, password: string) =>
+    request<LoginResponse>("/auth/login", json({ username, password })),
+
   listNegocios: () => request<Negocio[]>("/negocios"),
   getNegocio: (id: number) => request<Negocio>(`/negocios/${id}`),
   createNegocio: (payload: NegocioCreate) =>

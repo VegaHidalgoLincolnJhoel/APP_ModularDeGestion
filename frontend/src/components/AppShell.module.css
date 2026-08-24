@@ -97,11 +97,31 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  border: none;
   padding: 12px 14px;
   border-radius: 12px;
   background: oklch(1 0 0 / 0.06);
   color: oklch(1 0 0 / 0.7);
   font-size: 12px;
+  text-align: left;
+}
+
+.sidebarUser:hover {
+  background: oklch(1 0 0 / 0.1);
+  color: white;
+}
+
+.sidebarUser span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutHint {
+  flex: none;
+  opacity: 0.6;
 }
 
 /* --- main column --- */

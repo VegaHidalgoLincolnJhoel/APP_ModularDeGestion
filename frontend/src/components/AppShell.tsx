@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { SettingsIcon, UserIcon } from "./icons/Icons";
+import { Link } from "react-router-dom";
+import { LogoutIcon, UserIcon } from "./icons/Icons";
 import type { IconProps } from "./icons/Icons";
+import { useAuth } from "../hooks/useAuth";
 import styles from "./AppShell.module.css";
 
 export interface NavItem {
@@ -29,7 +30,7 @@ interface AppShellProps {
  * y otra desktop del árbol entero.
  */
 export function AppShell({ logo, negocioNombre, saludo, navItems, activeId, children }: AppShellProps) {
-  const navigate = useNavigate();
+  const { session, logout } = useAuth();
 
   return (
     <div className={styles.shell}>
@@ -52,10 +53,11 @@ export function AppShell({ logo, negocioNombre, saludo, navItems, activeId, chil
           ))}
         </nav>
         <div className={styles.sidebarSpacer} />
-        <div className={styles.sidebarUser}>
+        <button type="button" className={styles.sidebarUser} onClick={logout}>
           <UserIcon size={16} />
-          <span>Plan exento</span>
-        </div>
+          <span>{session?.nombre ?? "Cuenta"}</span>
+          <LogoutIcon size={14} className={styles.logoutHint} />
+        </button>
       </aside>
 
       <div className={styles.main}>
@@ -67,20 +69,15 @@ export function AppShell({ logo, negocioNombre, saludo, navItems, activeId, chil
               <div className={styles.saludo}>{saludo}</div>
             </div>
           </div>
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={() => navigate("/negocios")}
-            aria-label="Configuración"
-          >
-            <SettingsIcon size={18} />
+          <button type="button" className={styles.iconButton} onClick={logout} aria-label="Cerrar sesión">
+            <LogoutIcon size={18} />
           </button>
         </header>
 
         <header className={styles.desktopTopbar}>
           <h1 className={styles.desktopTitle}>{saludo}</h1>
-          <button type="button" className={styles.iconButton} aria-label="Configuración">
-            <SettingsIcon size={18} />
+          <button type="button" className={styles.iconButton} onClick={logout} aria-label="Cerrar sesión">
+            <LogoutIcon size={18} />
           </button>
         </header>
 

@@ -3,19 +3,27 @@ import { api, type Negocio, type NegocioCreate } from "./client";
 
 /**
  * Resuelve el negocio real de un rubro dado (comparando por prefijo,
- * insensible a mayúsculas) contra GET /negocios.
- *
- * Hoy no hay login ni selección de negocio — cada sesión de la app está
- * pensada para un solo negocio, así que esto asume que existe como mucho
- * uno por rubro. Cuando exista autenticación esto se reemplaza por "el
- * negocio del usuario logueado", no por esta búsqueda.
+ * insensible a mayúsculas) contra GET /negocios — un endpoint admin-only
+ * desde que existe autenticación. Por eso solo sirve para el flujo de
+ * administrador (ver useNegocioDelTipo); un usuario normal ya sabe su
+ * negocio por el `negocioId` que trae la sesión, sin listar nada — para
+ * ese caso, `enabled: false` evita pegarle a un endpoint que le va a
+ * devolver 403.
  */
-export function useNegocio(rubro: string, plantilla: Omit<NegocioCreate, "rubro">) {
+export function useNegocio(
+  rubro: string,
+  plantilla: Omit<NegocioCreate, "rubro">,
+  enabled: boolean = true,
+) {
   const [negocio, setNegocio] = useState<Negocio | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -29,7 +37,7 @@ export function useNegocio(rubro: string, plantilla: Omit<NegocioCreate, "rubro"
     } finally {
       setLoading(false);
     }
-  }, [rubro]);
+  }, [rubro, enabled]);
 
   useEffect(() => {
     cargar();
