@@ -7,6 +7,7 @@ import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { useProductos } from "../api/useProductos";
 import { api, type CierreCaja as CierreCajaType, type Movimiento } from "../api/client";
 import { formatMoney, todayKey } from "../lib/format";
+import { esCapital } from "../lib/contabilidad";
 import { navItemsFor } from "../data/navigation";
 import styles from "./CierreCaja.module.css";
 
@@ -133,8 +134,8 @@ function CierreCajaContenido({
     for (const m of movimientosDeHoy) {
       const monto = Number(m.precio_final);
       bruto += monto;
-      const esCapital = productosPorId.get(m.producto_id)?.clasificacion?.toLowerCase() === "producto";
-      if (esCapital) capital += monto;
+      const esItemCapital = esCapital(productosPorId.get(m.producto_id)?.clasificacion ?? null);
+      if (esItemCapital) capital += monto;
       else ganancia += monto;
       if (m.metodo_pago === "digital") digital += monto;
       else efectivo += monto;

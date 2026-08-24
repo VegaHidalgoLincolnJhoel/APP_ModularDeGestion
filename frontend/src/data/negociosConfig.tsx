@@ -21,7 +21,11 @@ export interface AccionRapida {
   id: string;
   label: string;
   icon: (props: IconProps) => JSX.Element;
-  clasificacion: "servicio" | "producto";
+  // Nombrado distinto de Producto.clasificacion a propósito: esto es
+  // agrupación de PANTALLA (qué sección del Inicio, "capital" vs "no
+  // capital" en el filtro real — ver lib/contabilidad.ts), no el valor
+  // real que guarda el backend ("capital" es el único que importa ahí).
+  categoria: "servicio" | "producto";
   /** Solo "venta de llanta" agrupa por medida antes de mostrar marcas —
    * ver MovimientoFlow. */
   agruparPorMedida?: boolean;
@@ -50,18 +54,18 @@ export const NEGOCIOS_CONFIG = {
     saludoFallback: "Hola",
     logo: TireIcon,
     servicios: [
-      { id: "parchado", label: "Parchado", icon: WrenchIcon, clasificacion: "servicio" },
-      { id: "inflado", label: "Inflado", icon: GaugeIcon, clasificacion: "servicio" },
+      { id: "parchado", label: "Parchado", icon: WrenchIcon, categoria: "servicio" },
+      { id: "inflado", label: "Inflado", icon: GaugeIcon, categoria: "servicio" },
     ],
     productos: [
       {
         id: "venta-llanta",
         label: "Venta de llanta",
         icon: TireIcon,
-        clasificacion: "producto",
+        categoria: "producto",
         agruparPorMedida: true,
       },
-      { id: "accesorio", label: "Accesorio", icon: NutIcon, clasificacion: "producto" },
+      { id: "accesorio", label: "Accesorio", icon: NutIcon, categoria: "producto" },
     ],
     modulosActivosDefault: {},
     // El papá (dueño de la llantería) es justo el caso RUS del spec —
@@ -74,12 +78,12 @@ export const NEGOCIOS_CONFIG = {
     saludoFallback: "Hola",
     logo: OilDropIcon,
     servicios: [
-      { id: "cambio-aceite", label: "Cambio de aceite", icon: OilDropIcon, clasificacion: "servicio" },
-      { id: "lavado-motor", label: "Lavado de motor", icon: SprayIcon, clasificacion: "servicio" },
+      { id: "cambio-aceite", label: "Cambio de aceite", icon: OilDropIcon, categoria: "servicio" },
+      { id: "lavado-motor", label: "Lavado de motor", icon: SprayIcon, categoria: "servicio" },
     ],
     productos: [
-      { id: "filtro-aire", label: "Filtro de aire", icon: FilterIcon, clasificacion: "producto" },
-      { id: "silicona", label: "Silicona", icon: TubeIcon, clasificacion: "producto" },
+      { id: "filtro-aire", label: "Filtro de aire", icon: FilterIcon, categoria: "producto" },
+      { id: "silicona", label: "Silicona", icon: TubeIcon, categoria: "producto" },
     ],
     modulosActivosDefault: { clientes_vehiculos: true },
     moduloRusActivoDefault: false,

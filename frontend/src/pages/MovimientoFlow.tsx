@@ -8,6 +8,7 @@ import { useProductos } from "../api/useProductos";
 import { useUsuarioPrincipal } from "../api/useUsuarioPrincipal";
 import { api, ApiError, StockBajoMinimoError, type Producto } from "../api/client";
 import { formatMoney, parseMoneyInput } from "../lib/format";
+import { esCapital } from "../lib/contabilidad";
 import { buscarAccion } from "../data/negociosConfig";
 import { navItemsFor } from "../data/navigation";
 import {
@@ -88,7 +89,7 @@ export default function MovimientoFlow() {
           usuario_id: usuarioId,
           producto_id: productoElegido.id,
           cliente_vehiculo_id: null,
-          tipo: accion!.clasificacion === "producto" ? "venta" : "servicio",
+          tipo: accion!.categoria === "producto" ? "venta" : "servicio",
           descripcion: accion!.label,
           precio_lista: productoElegido.precio_lista,
           precio_final: parseMoneyInput(precioFinal),
@@ -131,8 +132,11 @@ export default function MovimientoFlow() {
     );
   }
 
+  // El backend solo distingue "capital" (inventario físico) de todo lo
+  // demás (ver lib/contabilidad.ts) — nunca compara contra "producto" ni
+  // "servicio" literal, esos son categoría de PANTALLA.
   const candidatos = productos.filter(
-    (p) => p.activo && p.clasificacion?.toLowerCase() === accion.clasificacion,
+    (p) => p.activo && esCapital(p.clasificacion) === (accion.categoria === "producto"),
   );
   const medidas = [...new Set(candidatos.map((p) => p.medida).filter((m): m is string => Boolean(m)))];
   const enPasoMedida = accion.agruparPorMedida && !medidaElegida;
@@ -181,7 +185,7 @@ export default function MovimientoFlow() {
           ) : candidatos.length === 0 ? (
             <EmptyState
               icon={<AlertTriangleIcon size={22} />}
-              title={`No hay ${accion.clasificacion === "producto" ? "productos" : "servicios"} de este tipo`}
+              title={`No hay ${accion.categoria === "producto" ? "productos" : "servicios"} de este tipo`}
               message="Agregalos primero desde Stock para poder registrar esta acción."
               action={<Button onClick={() => navigate(`/${tipo}/stock`)}>Ir a Stock</Button>}
             />
@@ -326,7 +330,7 @@ export default function MovimientoFlow() {
 
           {!pidiendoConfirmacion && (
             <Button fullWidth onClick={() => enviar(false)} disabled={enviando || usuarioId === null}>
-              {enviando ? "Registrando…" : `Confirmar ${accion.clasificacion === "producto" ? "venta" : "servicio"}`}
+              {enviando ? "Registrando…" : `Confirmar ${accion.categoria === "producto" ? "venta" : "servicio"}`}
             </Button>
           )}
           <Button variant="ghost" onClick={() => navigate(`/${tipo}`)}>

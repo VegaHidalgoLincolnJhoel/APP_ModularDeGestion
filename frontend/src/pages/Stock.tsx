@@ -6,6 +6,7 @@ import { EmptyState } from "../components/EmptyState";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { useProductos } from "../api/useProductos";
 import { formatMoney } from "../lib/format";
+import { esCapital } from "../lib/contabilidad";
 import { navItemsFor } from "../data/navigation";
 import { BoxIcon, PlusIcon, WrenchIcon } from "../components/icons/Icons";
 import styles from "./Stock.module.css";
@@ -40,11 +41,10 @@ export default function Stock() {
     );
   }
 
-  // Solo inventario tangible: los servicios (parchado, cambio de aceite...)
-  // también son filas de Producto, pero no tienen stock que reportar.
-  const inventario = productos.filter(
-    (p) => p.activo && p.clasificacion?.toLowerCase() !== "servicio",
-  );
+  // Solo inventario tangible ("capital", ver lib/contabilidad.ts): los
+  // servicios también son filas de Producto, pero no tienen stock real
+  // que reportar acá.
+  const inventario = productos.filter((p) => p.activo && esCapital(p.clasificacion));
 
   return (
     <StockContenido
