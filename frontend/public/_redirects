@@ -1,0 +1,5 @@
+# SPA fallback para Cloudflare Pages / Netlify: sin esto, recargar una
+# ruta de React Router (ej. /llanteria/stock) da 404, porque el host
+# estático busca un archivo real en esa ruta y no existe — todo el
+# ruteo pasa por JS una vez que index.html cargó.
+/*  /index.html  200
