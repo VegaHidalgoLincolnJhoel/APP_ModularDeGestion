@@ -31,3 +31,16 @@ export function formatDate(iso: string): string {
 export function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+/** Sirve tanto para fechas con hora (Movimiento.fecha) como solo-fecha
+ * (RegistroCompra.fecha, "YYYY-MM-DD") — Date las parsea igual. */
+export function esDelMesActual(fechaIso: string): boolean {
+  const hoy = new Date();
+  const fecha = new Date(fechaIso);
+  return fecha.getFullYear() === hoy.getFullYear() && fecha.getMonth() === hoy.getMonth();
+}
+
+export function nombreMesActual(): string {
+  return new Date().toLocaleDateString("es-PE", { month: "long", year: "numeric" });
+}
+

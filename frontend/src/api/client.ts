@@ -59,6 +59,10 @@ function json(body: unknown): RequestInit {
   return { method: "POST", body: JSON.stringify(body) };
 }
 
+function jsonPatch(body: unknown): RequestInit {
+  return { method: "PATCH", body: JSON.stringify(body) };
+}
+
 // --- tipos: reflejan components/schemas de docs/openapi.yaml ---
 // Los montos llegan como string (Decimal en el backend, no float) —
 // ver ../lib/format.ts para mostrarlos/editarlos.
@@ -75,6 +79,7 @@ export interface Negocio {
 }
 
 export type NegocioCreate = Omit<Negocio, "id">;
+export type NegocioUpdate = Partial<NegocioCreate>;
 
 export interface Usuario {
   id: number;
@@ -180,6 +185,8 @@ export const api = {
   getNegocio: (id: number) => request<Negocio>(`/negocios/${id}`),
   createNegocio: (payload: NegocioCreate) =>
     request<Negocio>("/negocios", json(payload)),
+  updateNegocio: (id: number, payload: NegocioUpdate) =>
+    request<Negocio>(`/negocios/${id}`, jsonPatch(payload)),
 
   listUsuarios: (negocioId: number) =>
     request<Usuario[]>(`/negocios/${negocioId}/usuarios`),

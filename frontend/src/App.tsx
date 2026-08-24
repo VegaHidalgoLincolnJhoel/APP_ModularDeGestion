@@ -7,7 +7,8 @@ import ClientesVehiculos from "./pages/ClientesVehiculos";
 import Stock from "./pages/Stock";
 import AjustarStock from "./pages/AjustarStock";
 import RegistrarCompra from "./pages/RegistrarCompra";
-import Proximamente from "./pages/Proximamente";
+import Sunat from "./pages/Sunat";
+import Compras from "./pages/Compras";
 
 export default function App() {
   return (
@@ -22,8 +23,8 @@ export default function App() {
         <Route path="/:negocioTipo/stock" element={<Stock />} />
         <Route path="/:negocioTipo/stock/ajustar/:productoId" element={<AjustarStock />} />
         <Route path="/:negocioTipo/stock/comprar/:productoId" element={<RegistrarCompra />} />
-        <Route path="/:negocioTipo/compras" element={<Proximamente activeId="compras" titulo="Compras" />} />
-        <Route path="/:negocioTipo/sunat" element={<Proximamente activeId="sunat" titulo="SUNAT" />} />
+        <Route path="/:negocioTipo/sunat" element={<Sunat />} />
+        <Route path="/:negocioTipo/compras" element={<Compras />} />
         <Route path="/:negocioTipo/clientes" element={<ClientesVehiculos />} />
       </Routes>
     </BrowserRouter>
