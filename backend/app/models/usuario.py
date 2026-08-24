@@ -1,4 +1,4 @@
-from sqlalchemy import CheckConstraint, ForeignKey, String
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
@@ -23,5 +23,8 @@ class Usuario(Base):
     rol: Mapped[str] = mapped_column(String(50), nullable=False)
     username: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Para "revocar" un acceso sin perder el historial: un movimiento viejo
+    # sigue apuntando a este usuario_id aunque ya no pueda loguearse más.
+    activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     negocio: Mapped["Negocio"] = relationship(back_populates="usuarios")

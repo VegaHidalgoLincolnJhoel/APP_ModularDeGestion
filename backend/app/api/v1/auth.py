@@ -28,6 +28,14 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if usuario is None or not verificar_password(payload.password, usuario.password_hash):
         raise credenciales_invalidas
 
+    # A diferencia de "usuario o contraseña incorrectos", decir que la
+    # cuenta está deshabilitada no ayuda a un atacante a adivinar nada (ya
+    # sabe que el username existe y que la contraseña era correcta) — pero
+    # sí evita que el dueño de un negocio se quede sin entender por qué de
+    # golpe no puede entrar más.
+    if not usuario.activo:
+        raise HTTPException(status_code=401, detail="Usuario deshabilitado")
+
     token = crear_access_token(usuario.id, usuario.rol, usuario.negocio_id)
     return LoginResponse(
         access_token=token,

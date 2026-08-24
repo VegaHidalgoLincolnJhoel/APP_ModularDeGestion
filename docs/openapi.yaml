@@ -177,6 +177,13 @@ paths:
         para sumar más usuarios al negocio, o para resolver el `usuario_id`
         que pide `POST /movimientos` sin hardcodearlo.
       operationId: listUsuarios
+      parameters:
+        - name: activo
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filtra por accesos activos/desactivados. Sin mandarlo, trae todos.
       responses:
         "200":
           description: Lista de usuarios
@@ -199,6 +206,40 @@ paths:
       responses:
         "201":
           description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Usuario"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /negocios/{negocioId}/usuarios/{usuarioId}:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+      - name: usuarioId
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [usuarios]
+      summary: Editar usuario — resetear contraseña o desactivar acceso
+      description: >
+        Update parcial (solo se aplican los campos presentes en el body).
+        Mandar `password` resetea la contraseña; mandar `activo: false`
+        revoca el acceso sin borrar el usuario (el historial que lo
+        referencia, ej. movimientos, sigue intacto) — y corta el acceso al
+        toque, no espera a que expire un token ya emitido.
+      operationId: updateUsuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UsuarioUpdate"
+      responses:
+        "200":
+          description: Usuario actualizado
           content:
             application/json:
               schema:
@@ -687,6 +728,21 @@ components:
               description: Plaintext solo de paso — el backend la hashea y nunca la devuelve.
           required: [password]
 
+    UsuarioUpdate:
+      type: object
+      description: >
+        Update parcial: todos los campos opcionales, solo se aplican los
+        que vengan en el body (mismo criterio que NegocioUpdate).
+      properties:
+        nombre: { type: string }
+        rol: { type: string }
+        password:
+          type: string
+          description: Mandarla resetea la contraseña. Se hashea server-side, nunca se devuelve.
+        activo:
+          type: boolean
+          description: 'false revoca el acceso sin borrar el usuario ni su historial.'
+
     Usuario:
       allOf:
         - $ref: "#/components/schemas/UsuarioBase"
@@ -697,7 +753,8 @@ components:
               type: integer
               nullable: true
               description: null si es admin.
-          required: [id, negocio_id]
+            activo: { type: boolean }
+          required: [id, negocio_id, activo]
 
     ProductoBase:
       type: object
