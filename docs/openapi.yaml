@@ -85,6 +85,29 @@ paths:
                 $ref: "#/components/schemas/Negocio"
         "404":
           $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [negocios]
+      summary: Editar configuración del negocio
+      description: >
+        Update parcial (solo se tocan los campos presentes en el body).
+        Pensado sobre todo para `link_sunat`, editable desde la pestaña
+        SUNAT del frontend.
+      operationId: updateNegocio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NegocioUpdate"
+      responses:
+        "200":
+          description: Negocio actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Negocio"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /negocios/{negocioId}/usuarios:
     parameters:
@@ -517,6 +540,22 @@ components:
 
     NegocioCreate:
       $ref: "#/components/schemas/NegocioBase"
+
+    NegocioUpdate:
+      type: object
+      description: >
+        Update parcial: todos los campos opcionales, solo se aplican los
+        que vengan en el body (mismo criterio que ClienteVehiculoUpdate).
+      properties:
+        nombre: { type: string }
+        rubro: { type: string }
+        modulos_activos:
+          type: object
+          additionalProperties: true
+        plan_estado: { type: string }
+        fecha_ultimo_pago: { type: string, format: date, nullable: true }
+        link_sunat: { type: string, nullable: true }
+        modulo_rus_activo: { type: boolean }
 
     UsuarioBase:
       type: object
