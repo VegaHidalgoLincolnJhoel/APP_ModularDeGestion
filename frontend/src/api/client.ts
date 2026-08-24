@@ -123,17 +123,45 @@ export interface Negocio {
   modulo_rus_activo: boolean;
 }
 
-export type NegocioCreate = Omit<Negocio, "id">;
-export type NegocioUpdate = Partial<NegocioCreate>;
+export interface NegocioCreate {
+  nombre: string;
+  rubro: string;
+  modulos_activos?: Record<string, unknown>;
+  plan_estado?: string;
+  fecha_ultimo_pago?: string | null;
+  link_sunat?: string | null;
+  modulo_rus_activo?: boolean;
+  usuario_inicial?: {
+    nombre: string;
+    rol: string;
+    username: string;
+    password?: string;
+  };
+}
+export type NegocioUpdate = Partial<Omit<Negocio, "id">>;
 
 export interface Usuario {
   id: number;
-  negocio_id: number;
+  negocio_id: number | null;
   nombre: string;
   rol: string;
+  username?: string;
+  activo?: boolean;
 }
 
-export type UsuarioCreate = Omit<Usuario, "id" | "negocio_id">;
+export interface UsuarioCreate {
+  nombre: string;
+  rol: string;
+  username: string;
+  password?: string;
+}
+
+export interface UsuarioUpdate {
+  nombre?: string;
+  rol?: string;
+  password?: string;
+  activo?: boolean;
+}
 
 export interface Producto {
   id: number;
@@ -177,11 +205,14 @@ export interface Movimiento {
   descripcion: string | null;
   precio_lista: string;
   precio_final: string;
+  monto_capital: number;
   metodo_pago: string | null;
   fecha: string;
 }
 
-export type MovimientoCreate = Omit<Movimiento, "id" | "negocio_id">;
+export type MovimientoCreate = Omit<Movimiento, "id" | "negocio_id" | "monto_capital"> & {
+  monto_capital?: number | null;
+};
 
 export interface CierreCaja {
   id: number;
@@ -248,6 +279,8 @@ export const api = {
     request<Usuario[]>(`/negocios/${negocioId}/usuarios`),
   createUsuario: (negocioId: number, payload: UsuarioCreate) =>
     request<Usuario>(`/negocios/${negocioId}/usuarios`, json(payload)),
+  updateUsuario: (negocioId: number, usuarioId: number, payload: UsuarioUpdate) =>
+    request<Usuario>(`/negocios/${negocioId}/usuarios/${usuarioId}`, jsonPatch(payload)),
 
   listProductos: (negocioId: number) =>
     request<Producto[]>(`/negocios/${negocioId}/productos`),

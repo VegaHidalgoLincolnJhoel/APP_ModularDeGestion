@@ -107,6 +107,13 @@ def _crear_movimiento(
     precio_lista = payload.precio_lista if payload.precio_lista is not None else producto.precio_lista
     precio_final = payload.precio_final if payload.precio_final is not None else precio_lista
 
+    if payload.monto_capital is not None:
+        monto_capital = payload.monto_capital
+    elif es_capital(producto.clasificacion):
+        monto_capital = producto.precio_compra
+    else:
+        monto_capital = 0.0
+
     datos_movimiento = {
         "negocio_id": negocio_id,
         "usuario_id": payload.usuario_id,
@@ -116,6 +123,7 @@ def _crear_movimiento(
         "descripcion": payload.descripcion,
         "precio_lista": precio_lista,
         "precio_final": precio_final,
+        "monto_capital": monto_capital,
         "metodo_pago": payload.metodo_pago,
     }
     # fecha tiene default en el modelo (hora de registro); solo se fuerza

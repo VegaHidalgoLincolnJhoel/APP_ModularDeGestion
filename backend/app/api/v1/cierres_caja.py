@@ -5,12 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.auth import verificar_acceso_negocio
-from app.core.contabilidad import es_capital
 from app.db.session import get_db
 from app.models.cierre_caja import CierreCaja as CierreCajaModel
 from app.models.movimiento import Movimiento as MovimientoModel
 from app.models.negocio import Negocio as NegocioModel
-from app.models.producto import Producto as ProductoModel
 from app.schemas.cierre_caja import CierreCaja, CierreCajaCreate
 
 router = APIRouter(
@@ -61,8 +59,11 @@ def create_cierre_caja(negocio_id: int, payload: CierreCajaCreate, db: Session =
     fin = datetime.combine(payload.fecha_fin, time.max)
 
     filas = (
-        db.query(MovimientoModel.precio_final, MovimientoModel.metodo_pago, ProductoModel.clasificacion)
-        .join(ProductoModel, MovimientoModel.producto_id == ProductoModel.id)
+        db.query(
+            MovimientoModel.precio_final,
+            MovimientoModel.monto_capital,
+            MovimientoModel.metodo_pago,
+        )
         .filter(
             MovimientoModel.negocio_id == negocio_id,
             MovimientoModel.fecha >= inicio,
@@ -77,18 +78,18 @@ def create_cierre_caja(negocio_id: int, payload: CierreCajaCreate, db: Session =
     total_efectivo = Decimal("0")
     total_digital = Decimal("0")
 
-    for precio_final, metodo_pago, clasificacion in filas:
-        monto = Decimal(precio_final)
-        total_bruto += monto
-        if es_capital(clasificacion):
-            total_capital += monto
-        else:
-            total_ganancia += monto
+    for precio_final, monto_capital, metodo_pago in filas:
+        p_final = Decimal(str(precio_final)) if precio_final is not None else Decimal("0")
+        m_capital = Decimal(str(monto_capital)) if monto_capital is not None else Decimal("0")
+
+        total_bruto += p_final
+        total_capital += m_capital
+        total_ganancia += (p_final - m_capital)
 
         if metodo_pago == METODO_EFECTIVO:
-            total_efectivo += monto
+            total_efectivo += p_final
         elif metodo_pago == METODO_DIGITAL:
-            total_digital += monto
+            total_digital += p_final
 
     cierre = CierreCajaModel(
         negocio_id=negocio_id,

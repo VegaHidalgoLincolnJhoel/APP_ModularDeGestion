@@ -22,5 +22,6 @@ class Movimiento(Base):
     descripcion: Mapped[str | None] = mapped_column(String(500), nullable=True)
     precio_lista: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
     precio_final: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
+    monto_capital: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
     metodo_pago: Mapped[str | None] = mapped_column(String(50), nullable=True)
     fecha: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -21,6 +21,7 @@ class MovimientoCreate(MovimientoBase):
     # final negociado" que pide el negocio.
     precio_lista: Decimal | None = None
     precio_final: Decimal | None = None
+    monto_capital: Decimal | None = None
     # Solo se usa para reconstruir movimientos hechos offline (cola de sync);
     # en el flujo normal se omite y el servidor pone la hora de registro.
     fecha: datetime | None = None
@@ -33,4 +34,5 @@ class Movimiento(MovimientoBase):
     negocio_id: int
     precio_lista: Decimal
     precio_final: Decimal
+    monto_capital: Decimal
     fecha: datetime

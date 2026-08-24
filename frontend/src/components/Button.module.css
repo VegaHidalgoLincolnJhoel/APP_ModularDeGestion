@@ -1,14 +1,16 @@
 .button {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 14px;
   border: none;
-  border-radius: 14px;
-  padding: 15px 20px;
+  border-radius: 12px;
+  padding: 12px 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
 .button:disabled {
@@ -17,8 +19,14 @@
 }
 
 .primary {
-  background: var(--ink);
+  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
   color: white;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+}
+
+.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.4);
 }
 
 .accent {
@@ -27,12 +35,47 @@
 }
 
 .ghost {
-  background: none;
-  color: var(--ink-faint);
+  background: transparent;
+  color: #94a3b8;
   font-family: var(--font-body);
   font-weight: 500;
   font-size: 13px;
-  padding: 8px;
+  padding: 8px 12px;
+}
+
+.ghost:hover:not(:disabled) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.outline {
+  background: transparent;
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  color: #2dd4bf;
+}
+
+.outline:hover:not(:disabled) {
+  background: rgba(13, 148, 136, 0.15);
+  border-color: #2dd4bf;
+  color: #5eead4;
+}
+
+.sm {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  border-radius: 8px;
+}
+
+.md {
+  padding: 11px 16px;
+  font-size: 13.5px;
+  border-radius: 12px;
+}
+
+.lg {
+  padding: 14px 22px;
+  font-size: 15px;
+  border-radius: 14px;
 }
 
 .fullWidth {

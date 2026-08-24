@@ -32,6 +32,9 @@ def list_usuarios(negocio_id: int, activo: bool | None = None, db: Session = Dep
     roles por empleado más allá de admin/negocio (ver "Fuera de alcance" en
     el CLAUDE.md raíz).
     """
+    negocio = db.get(NegocioModel, negocio_id)
+    if negocio is None:
+        raise HTTPException(status_code=404, detail="Negocio no encontrado")
     query = db.query(UsuarioModel).filter(UsuarioModel.negocio_id == negocio_id)
     if activo is not None:
         query = query.filter(UsuarioModel.activo == activo)
@@ -43,6 +46,19 @@ def create_usuario(negocio_id: int, payload: UsuarioCreate, db: Session = Depend
     negocio = db.get(NegocioModel, negocio_id)
     if negocio is None:
         raise HTTPException(status_code=404, detail="Negocio no encontrado")
+
+    if payload.rol == "admin":
+        raise HTTPException(
+            status_code=400, detail="Un usuario de negocio no puede tener rol admin"
+        )
+
+    usuario_existente = (
+        db.query(UsuarioModel).filter(UsuarioModel.username == payload.username).first()
+    )
+    if usuario_existente:
+        raise HTTPException(
+            status_code=400, detail="El nombre de usuario ya está registrado"
+        )
 
     datos = payload.model_dump(exclude={"password"})
     usuario = UsuarioModel(
@@ -67,6 +83,11 @@ def update_usuario(
     más de un usuario.
     """
     usuario = _get_usuario_o_404(negocio_id, usuario_id, db)
+
+    if payload.rol == "admin":
+        raise HTTPException(
+            status_code=400, detail="Un usuario de negocio no puede tener rol admin"
+        )
 
     cambios = payload.model_dump(exclude_unset=True, exclude={"password"})
     for campo, valor in cambios.items():

@@ -6,7 +6,7 @@ import { EmptyState } from "../components/EmptyState";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { useProductos } from "../api/useProductos";
 import { formatMoney } from "../lib/format";
-import { esCapital } from "../lib/contabilidad";
+import { esCapital, getEstadoUsoBadge } from "../lib/contabilidad";
 import { navItemsFor } from "../data/navigation";
 import { BoxIcon, PlusIcon, WrenchIcon } from "../components/icons/Icons";
 import styles from "./Stock.module.css";
@@ -141,9 +141,21 @@ function StockContenido({
               <div className={styles.cardGrid}>
                 {items.map((p) => {
                   const bajoMinimo = p.stock_actual < p.stock_minimo;
+                  const badge = getEstadoUsoBadge(p.estado_uso);
                   return (
                     <div key={p.id} className={`${styles.card} ${bajoMinimo ? styles.cardBajo : ""}`}>
-                      <div className={styles.cardMedida}>{p.medida ?? p.nombre}</div>
+                      <div className={styles.cardMedidaRow}>
+                        <span className={styles.cardMedida}>{p.medida ?? p.nombre}</span>
+                        {badge && (
+                          <span
+                            className={
+                              badge.tipo === "nuevo" ? styles.badgeNuevo : styles.badgeUsado
+                            }
+                          >
+                            {badge.label}
+                          </span>
+                        )}
+                      </div>
                       <div className={styles.cardRow}>
                         <span className={bajoMinimo ? styles.cantidadBaja : styles.cantidad}>
                           {p.stock_actual} en stock

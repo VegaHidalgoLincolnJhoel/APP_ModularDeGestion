@@ -26,6 +26,21 @@ def create_negocio(payload: NegocioCreate, db: Session = Depends(get_db)):
     transacción: un negocio sin ningún usuario con credenciales quedaría
     inaccesible para siempre, no tendría sentido dejarlo a medio crear.
     """
+    if payload.usuario_inicial.rol == "admin":
+        raise HTTPException(
+            status_code=400, detail="El usuario del negocio no puede tener rol admin"
+        )
+
+    usuario_existente = (
+        db.query(UsuarioModel)
+        .filter(UsuarioModel.username == payload.usuario_inicial.username)
+        .first()
+    )
+    if usuario_existente:
+        raise HTTPException(
+            status_code=400, detail="El nombre de usuario ya está registrado"
+        )
+
     datos_negocio = payload.model_dump(exclude={"usuario_inicial"})
     negocio = NegocioModel(**datos_negocio)
     db.add(negocio)

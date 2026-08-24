@@ -802,6 +802,7 @@ components:
         descripcion: { type: string, nullable: true }
         precio_lista: { type: string, format: decimal }
         precio_final: { type: string, format: decimal }
+        monto_capital: { type: string, format: decimal }
         metodo_pago: { type: string, nullable: true }
         fecha: { type: string, format: date-time }
       required: [usuario_id, producto_id, tipo]
