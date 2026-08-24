@@ -30,27 +30,28 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('usuarios', sa.Column('username', sa.String(length=100), nullable=False))
-    op.add_column('usuarios', sa.Column('password_hash', sa.String(length=255), nullable=False))
-    op.alter_column('usuarios', 'negocio_id',
-               existing_type=sa.INTEGER(),
-               nullable=True)
-    op.create_unique_constraint('uq_usuarios_username', 'usuarios', ['username'])
-    # Autogenerate no detecta CHECK constraints por default, así que este
-    # queda a mano: refuerza a nivel de DB que solo un admin puede tener
-    # negocio_id nulo (ver Usuario.__table_args__ en app/models/usuario.py).
-    op.create_check_constraint(
-        'ck_usuarios_admin_sin_negocio',
-        'usuarios',
-        "(rol = 'admin' AND negocio_id IS NULL) OR (rol != 'admin' AND negocio_id IS NOT NULL)",
-    )
+    # batch_alter_table: en Postgres emite el mismo ALTER TABLE de siempre,
+    # pero SQLite no soporta ALTER COLUMN ni agregar unique/check constraint
+    # fuera del modo batch (copy-and-move) — mismo motivo que en
+    # ea7946e19e07_cola_sync_id_de_cliente_para_.py.
+    with op.batch_alter_table('usuarios') as batch_op:
+        batch_op.add_column(sa.Column('username', sa.String(length=100), nullable=False))
+        batch_op.add_column(sa.Column('password_hash', sa.String(length=255), nullable=False))
+        batch_op.alter_column('negocio_id', existing_type=sa.INTEGER(), nullable=True)
+        batch_op.create_unique_constraint('uq_usuarios_username', ['username'])
+        # Autogenerate no detecta CHECK constraints por default, así que este
+        # queda a mano: refuerza a nivel de DB que solo un admin puede tener
+        # negocio_id nulo (ver Usuario.__table_args__ en app/models/usuario.py).
+        batch_op.create_check_constraint(
+            'ck_usuarios_admin_sin_negocio',
+            "(rol = 'admin' AND negocio_id IS NULL) OR (rol != 'admin' AND negocio_id IS NOT NULL)",
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint('ck_usuarios_admin_sin_negocio', 'usuarios', type_='check')
-    op.drop_constraint('uq_usuarios_username', 'usuarios', type_='unique')
-    op.alter_column('usuarios', 'negocio_id',
-               existing_type=sa.INTEGER(),
-               nullable=False)
-    op.drop_column('usuarios', 'password_hash')
-    op.drop_column('usuarios', 'username')
+    with op.batch_alter_table('usuarios') as batch_op:
+        batch_op.drop_constraint('ck_usuarios_admin_sin_negocio', type_='check')
+        batch_op.drop_constraint('uq_usuarios_username', type_='unique')
+        batch_op.alter_column('negocio_id', existing_type=sa.INTEGER(), nullable=False)
+        batch_op.drop_column('password_hash')
+        batch_op.drop_column('username')

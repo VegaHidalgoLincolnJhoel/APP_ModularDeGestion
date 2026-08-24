@@ -24,16 +24,19 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        'usuarios',
-        sa.Column('activo', sa.Boolean(), nullable=False, server_default=sa.true()),
-    )
-    # El server_default solo hacía falta para completar las filas
-    # existentes en el momento del ALTER; de acá en más, quien maneja el
-    # valor por defecto de una fila nueva es la app (Usuario.activo en el
-    # modelo), no la DB — se lo saca para no tener la regla en dos lugares.
-    op.alter_column('usuarios', 'activo', server_default=None)
+    # batch_alter_table por la misma razón que en be1f7ca24465_usuarios_auth.py
+    # (ALTER COLUMN fuera de modo batch no corre en SQLite).
+    with op.batch_alter_table('usuarios') as batch_op:
+        batch_op.add_column(
+            sa.Column('activo', sa.Boolean(), nullable=False, server_default=sa.true()),
+        )
+        # El server_default solo hacía falta para completar las filas
+        # existentes en el momento del ALTER; de acá en más, quien maneja el
+        # valor por defecto de una fila nueva es la app (Usuario.activo en el
+        # modelo), no la DB — se lo saca para no tener la regla en dos lugares.
+        batch_op.alter_column('activo', server_default=None)
 
 
 def downgrade() -> None:
-    op.drop_column('usuarios', 'activo')
+    with op.batch_alter_table('usuarios') as batch_op:
+        batch_op.drop_column('activo')
