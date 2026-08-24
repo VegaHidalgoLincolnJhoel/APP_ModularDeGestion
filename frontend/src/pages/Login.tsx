@@ -32,7 +32,10 @@ export default function Login() {
       const origen = (location.state as { from?: Location } | null)?.from;
       navigate(origen?.pathname ?? destino, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 401 ? "Usuario o contraseña incorrectos." : "No se pudo iniciar sesión.");
+      // client.ts ya deja en .message el detail humano que manda el
+      // backend (ej. "Usuario deshabilitado" vs. credenciales inválidas)
+      // — mostrarlo tal cual en vez de un texto genérico que lo taparía.
+      setError(err instanceof ApiError ? err.message : "No se pudo iniciar sesión.");
     } finally {
       setEnviando(false);
     }
