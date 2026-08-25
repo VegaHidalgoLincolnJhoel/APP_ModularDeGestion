@@ -13,6 +13,7 @@ import {
   CloseIcon,
   LogoutIcon,
   NutIcon,
+  OilDropIcon,
   PlusIcon,
   ReceiptIcon,
   SearchIcon,
@@ -22,6 +23,16 @@ import {
   WrenchIcon,
 } from "../components/icons/Icons";
 import styles from "./Dashboard.module.css";
+
+function getRubroIcon(rubro: string) {
+  const r = (rubro || "").toLowerCase();
+  if (r.includes("llant") || r.includes("neumat")) return <TireIcon size={22} />;
+  if (r.includes("lubri") || r.includes("aceit")) return <OilDropIcon size={22} />;
+  if (r.includes("repuesto") || r.includes("bodega") || r.includes("stock"))
+    return <BoxIcon size={22} />;
+  if (r.includes("ferreter")) return <NutIcon size={22} />;
+  return <WrenchIcon size={22} />;
+}
 
 export default function Dashboard() {
   const { session, logout } = useAuth();
@@ -37,12 +48,16 @@ export default function Dashboard() {
   const [modalNuevoAbierto, setModalNuevoAbierto] = useState(false);
   const [creandoNegocio, setCreandoNegocio] = useState(false);
   const [errorNuevoNegocio, setErrorNuevoNegocio] = useState<string | null>(null);
+
+  // Formulario nuevo negocio
+  const [rubroSeleccionado, setRubroSeleccionado] = useState<string>("llantería");
+  const [customRubroTexto, setCustomRubroTexto] = useState<string>("");
   const [nuevoForm, setNuevoForm] = useState({
     nombre: "",
     rubro: "llantería",
     stock: true,
     clientes_vehiculos: false,
-    sunat: false,
+    sunat: true,
     whatsapp: false,
     usuario_nombre: "",
     usuario_username: "",
@@ -206,17 +221,58 @@ export default function Dashboard() {
     }
   };
 
+  // Handler inteligente para cambio de rubro con sugerencia de módulos
+  const handleRubroChange = (nuevoRubroKey: string) => {
+    setRubroSeleccionado(nuevoRubroKey);
+    let defaults = {
+      stock: true,
+      clientes_vehiculos: false,
+      sunat: false,
+      whatsapp: false,
+    };
+    if (nuevoRubroKey === "llantería") {
+      defaults = { stock: true, clientes_vehiculos: false, sunat: true, whatsapp: false };
+    } else if (nuevoRubroKey === "lubricentro") {
+      defaults = { stock: true, clientes_vehiculos: true, sunat: false, whatsapp: true };
+    } else if (nuevoRubroKey === "taller_mixto" || nuevoRubroKey === "taller_mecanico") {
+      defaults = { stock: true, clientes_vehiculos: true, sunat: true, whatsapp: true };
+    } else if (nuevoRubroKey === "carwash") {
+      defaults = { stock: false, clientes_vehiculos: true, sunat: false, whatsapp: true };
+    } else if (
+      nuevoRubroKey === "repuestos" ||
+      nuevoRubroKey === "ferreteria" ||
+      nuevoRubroKey === "bodega"
+    ) {
+      defaults = { stock: true, clientes_vehiculos: false, sunat: true, whatsapp: false };
+    }
+
+    const rubroFinal =
+      nuevoRubroKey === "personalizado" ? customRubroTexto || "otro" : nuevoRubroKey;
+
+    setNuevoForm((prev) => ({
+      ...prev,
+      rubro: rubroFinal,
+      ...defaults,
+    }));
+  };
+
   // Dar de alta negocio con su usuario inicial
   const submitNuevoNegocio = async (e: FormEvent) => {
     e.preventDefault();
     if (!nuevoForm.nombre || !nuevoForm.usuario_username || !nuevoForm.usuario_password)
       return;
+
+    const rubroFinal =
+      rubroSeleccionado === "personalizado"
+        ? customRubroTexto.trim() || "otro"
+        : rubroSeleccionado;
+
     setCreandoNegocio(true);
     setErrorNuevoNegocio(null);
     try {
       const creado = await api.createNegocio({
         nombre: nuevoForm.nombre,
-        rubro: nuevoForm.rubro,
+        rubro: rubroFinal,
         plan_estado: "activo",
         modulo_rus_activo: nuevoForm.sunat,
         modulos_activos: {
@@ -233,12 +289,14 @@ export default function Dashboard() {
       });
       setNegocios((prev) => [creado, ...prev]);
       setModalNuevoAbierto(false);
+      setRubroSeleccionado("llantería");
+      setCustomRubroTexto("");
       setNuevoForm({
         nombre: "",
         rubro: "llantería",
         stock: true,
         clientes_vehiculos: false,
-        sunat: false,
+        sunat: true,
         whatsapp: false,
         usuario_nombre: "",
         usuario_username: "",
@@ -268,10 +326,11 @@ export default function Dashboard() {
   ).length;
 
   return (
-    <main className={styles.page}>
-      {/* Fondos luminosos para Glassmorphism */}
-      <div className={styles.bgGlowTop} />
-      <div className={styles.bgGlowBottom} />
+    <div className={styles.wrapper}>
+      <main className={styles.page}>
+        {/* Fondos luminosos para Glassmorphism */}
+        <div className={styles.bgGlowTop} />
+        <div className={styles.bgGlowBottom} />
 
       <header className={styles.topHeader}>
         <div className={styles.brandGroup}>
@@ -402,11 +461,7 @@ export default function Dashboard() {
                 <div className={styles.cardHeader}>
                   <div className={styles.cardTitleGroup}>
                     <div className={styles.rubroIcon}>
-                      {negocio.rubro.toLowerCase().includes("llant") ? (
-                        <TireIcon size={22} />
-                      ) : (
-                        <WrenchIcon size={22} />
-                      )}
+                      {getRubroIcon(negocio.rubro)}
                     </div>
                     <div>
                       <h2 className={styles.negocioNombre}>{negocio.nombre}</h2>
@@ -570,19 +625,41 @@ export default function Dashboard() {
                     <span className={styles.label}>Rubro *</span>
                     <select
                       className={styles.input}
-                      value={nuevoForm.rubro}
-                      onChange={(e) =>
-                        setNuevoForm({ ...nuevoForm, rubro: e.target.value })
-                      }
+                      value={rubroSeleccionado}
+                      onChange={(e) => handleRubroChange(e.target.value)}
                     >
-                      <option value="llantería">Llantería</option>
-                      <option value="lubricentro">Lubricentro</option>
-                      <option value="bodega">Bodega</option>
-                      <option value="taller">Taller Mecánico</option>
-                      <option value="otro">Otro Rubro</option>
+                      <option value="llantería">Llantería / Neumáticos</option>
+                      <option value="lubricentro">Lubricentro / Aceites</option>
+                      <option value="taller_mixto">Taller Mixto (Llantería + Lubricentro)</option>
+                      <option value="taller_mecanico">Taller Mecánico / Automotriz</option>
+                      <option value="carwash">Lavado de Autos / Car Wash</option>
+                      <option value="repuestos">Venta de Repuestos / Autopartes</option>
+                      <option value="ferreteria">Ferretería / Herramientas</option>
+                      <option value="bodega">Bodega / Minimarket</option>
+                      <option value="servicios">Servicios Generales</option>
+                      <option value="personalizado">✏️ Otro rubro (Escribir personalizado...)</option>
                     </select>
                   </label>
                 </div>
+
+                {rubroSeleccionado === "personalizado" && (
+                  <div className={styles.formRow} style={{ marginTop: "12px" }}>
+                    <label className={styles.field}>
+                      <span className={styles.label}>Nombre del Rubro Personalizado *</span>
+                      <input
+                        required
+                        type="text"
+                        className={styles.input}
+                        placeholder="Ej. Taller de Motos, Carpintería, etc."
+                        value={customRubroTexto}
+                        onChange={(e) => {
+                          setCustomRubroTexto(e.target.value);
+                          setNuevoForm((prev) => ({ ...prev, rubro: e.target.value }));
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
 
                 <div className={styles.field}>
                   <span className={styles.label}>Módulos Iniciales Activos</span>
@@ -963,6 +1040,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-    </main>
+      </main>
+    </div>
   );
 }
