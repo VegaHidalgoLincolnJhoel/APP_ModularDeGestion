@@ -77,6 +77,7 @@ interface ContenidoProps {
 
 function StockContenido({
   tipo,
+  negocioId,
   moduloRusActivo,
   inventario,
   cargando,
@@ -111,7 +112,7 @@ function StockContenido({
   }, [inventario]);
 
   return (
-    <AppShell logo={logo} negocioNombre={negocioNombre} saludo="Stock" navItems={navItems} activeId="stock">
+    <AppShell logo={logo} negocioNombre={negocioNombre} saludo="Stock" navItems={navItems} activeId="stock" negocioId={negocioId}>
       <div className={styles.tabs}>
         <button
           type="button"

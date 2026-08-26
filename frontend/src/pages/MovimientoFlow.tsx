@@ -126,6 +126,7 @@ export default function MovimientoFlow() {
         saludo={accion.label}
         navItems={navItemsFor(tipo)}
         activeId="inicio"
+        negocioId={negocio.id}
       >
         <EmptyState
           icon={<CheckIcon size={24} />}
@@ -163,6 +164,7 @@ export default function MovimientoFlow() {
       saludo={accion.label}
       navItems={navItemsFor(tipo)}
       activeId="inicio"
+      negocioId={negocio.id}
     >
       <div className={styles.header}>
         <button

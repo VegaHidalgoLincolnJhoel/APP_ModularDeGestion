@@ -35,13 +35,13 @@ def procesar_sync(negocio_id: int, items: list[ColaSyncItem], db: Session = Depe
     if negocio is None:
         raise HTTPException(status_code=404, detail="Negocio no encontrado")
 
-    return [_procesar_item(negocio, item, db) for item in items]
+    return [_procesar_item(negocio_id, item, db) for item in items]
 
 
-def _procesar_item(negocio: NegocioModel, item: ColaSyncItem, db: Session) -> ColaSyncResultado:
+def _procesar_item(negocio_id: int, item: ColaSyncItem, db: Session) -> ColaSyncResultado:
     ya_procesado = (
         db.query(ColaSyncModel)
-        .filter(ColaSyncModel.negocio_id == negocio.id, ColaSyncModel.cliente_id == item.id)
+        .filter(ColaSyncModel.negocio_id == negocio_id, ColaSyncModel.cliente_id == item.id)
         .first()
     )
     if ya_procesado is not None:
@@ -52,7 +52,7 @@ def _procesar_item(negocio: NegocioModel, item: ColaSyncItem, db: Session) -> Co
         )
 
     if item.entidad not in ENTIDADES_SOPORTADAS:
-        _guardar_registro(negocio.id, item, db, estado="error")
+        _guardar_registro(negocio_id, item, db, estado="error")
         return ColaSyncResultado(
             id=item.id,
             estado="error",
@@ -65,14 +65,14 @@ def _procesar_item(negocio: NegocioModel, item: ColaSyncItem, db: Session) -> Co
         # offline — no hay nadie mirando la pantalla para confirmar el aviso
         # de stock bajo mínimo, así que se aplica igual y queda para que el
         # dueño lo revise después en el reporte de stock.
-        _crear_movimiento(negocio.id, movimiento_payload, confirmar_bajo_minimo=True, db=db)
+        _crear_movimiento(negocio_id, movimiento_payload, confirmar_bajo_minimo=True, db=db)
     except (ValidationError, HTTPException) as exc:
         db.rollback()
         detalle = _detalle_de_error(exc)
-        _guardar_registro(negocio.id, item, db, estado="error")
+        _guardar_registro(negocio_id, item, db, estado="error")
         return ColaSyncResultado(id=item.id, estado="error", detalle=detalle)
 
-    _guardar_registro(negocio.id, item, db, estado="aplicado")
+    _guardar_registro(negocio_id, item, db, estado="aplicado")
     return ColaSyncResultado(id=item.id, estado="aplicado", detalle=None)
 
 

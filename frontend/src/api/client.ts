@@ -3,10 +3,15 @@
 // solo lugar. Los tipos de acá siguen docs/openapi.yaml al pie de la letra;
 // si el backend cambia una forma de respuesta, este archivo se actualiza
 // junto con el contrato, no antes.
-//
-// TODO(offline): mientras no exista el store local (IndexedDB) + cola de
-// sync (POST /negocios/{id}/sync, ver docs/openapi.yaml), cualquier
-// escritura hecha desde acá se pierde si no hay red.
+
+import {
+  actualizarStockOptimista,
+  encolarSyncItem,
+  generateUUID,
+  getProductosCache,
+  saveProductosCache,
+} from "../lib/offlineStore";
+import { syncManager } from "../lib/syncManager";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -264,6 +269,80 @@ export interface LoginResponse {
   nombre: string;
 }
 
+export interface ColaSyncItem {
+  id: string;
+  entidad: string;
+  payload: Record<string, unknown>;
+  fecha_creacion: string;
+}
+
+export interface ColaSyncResultado {
+  id: string;
+  estado: "aplicado" | "error" | "duplicado";
+  detalle: string | null;
+}
+
+/**
+ * Encola un movimiento en la base de datos local (IndexedDB) cuando no hay conexión,
+ * realiza el descuento optimista de stock y retorna el movimiento generado.
+ */
+async function procesarMovimientoOffline(
+  negocioId: number,
+  payload: MovimientoCreate,
+): Promise<Movimiento> {
+  const uuid = generateUUID();
+  const fecha = payload.fecha || new Date().toISOString();
+
+  // 1. Encolar en IndexedDB
+  await encolarSyncItem({
+    id: uuid,
+    negocio_id: negocioId,
+    entidad: "movimiento",
+    payload: {
+      usuario_id: payload.usuario_id,
+      producto_id: payload.producto_id,
+      cliente_vehiculo_id: payload.cliente_vehiculo_id ?? null,
+      tipo: payload.tipo,
+      descripcion: payload.descripcion ?? null,
+      precio_lista: payload.precio_lista,
+      precio_final: payload.precio_final,
+      monto_capital: payload.monto_capital ?? null,
+      metodo_pago: payload.metodo_pago ?? null,
+      fecha: fecha,
+    },
+    fecha_creacion: fecha,
+    estado: "pendiente",
+  });
+
+  // 2. Descontar stock local optimista si es venta
+  if (payload.tipo === "venta" || payload.monto_capital !== null) {
+    try {
+      await actualizarStockOptimista(negocioId, payload.producto_id, -1);
+    } catch (e) {
+      console.warn("No se pudo descontar stock local optimista:", e);
+    }
+  }
+
+  // 3. Notificar al syncManager para actualizar badges y estado
+  syncManager.notifyItemQueued(negocioId);
+
+  // 4. Retornar el movimiento generado para continuar el flujo del usuario
+  return {
+    id: -Date.now(),
+    negocio_id: negocioId,
+    usuario_id: payload.usuario_id,
+    producto_id: payload.producto_id,
+    cliente_vehiculo_id: payload.cliente_vehiculo_id ?? null,
+    tipo: payload.tipo,
+    descripcion: payload.descripcion ?? null,
+    precio_lista: payload.precio_lista,
+    precio_final: payload.precio_final,
+    monto_capital: Number(payload.monto_capital ?? 0),
+    metodo_pago: payload.metodo_pago ?? null,
+    fecha: fecha,
+  };
+}
+
 export const api = {
   login: (username: string, password: string) =>
     request<LoginResponse>("/auth/login", json({ username, password })),
@@ -282,8 +361,29 @@ export const api = {
   updateUsuario: (negocioId: number, usuarioId: number, payload: UsuarioUpdate) =>
     request<Usuario>(`/negocios/${negocioId}/usuarios/${usuarioId}`, jsonPatch(payload)),
 
-  listProductos: (negocioId: number) =>
-    request<Producto[]>(`/negocios/${negocioId}/productos`),
+  listProductos: async (negocioId: number): Promise<Producto[]> => {
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (isOffline) {
+      const cached = await getProductosCache(negocioId);
+      if (cached.length > 0) return cached;
+    }
+    try {
+      const productos = await request<Producto[]>(`/negocios/${negocioId}/productos`);
+      saveProductosCache(negocioId, productos).catch((err) => {
+        console.warn("Error guardando productos en cache local:", err);
+      });
+      return productos;
+    } catch (err) {
+      // Si falló por error de red o servidor inaccesible, recuperar del caché local
+      if (!(err instanceof ApiError) || err.status >= 500 || err.status === 0) {
+        const cached = await getProductosCache(negocioId);
+        if (cached.length > 0) {
+          return cached;
+        }
+      }
+      throw err;
+    }
+  },
 
   /** 403 si el negocio no tiene modulos_activos.clientes_vehiculos — el
    * caller debe chequear eso antes de llamar, no solo capturar el error. */
@@ -299,8 +399,12 @@ export const api = {
     negocioId: number,
     payload: MovimientoCreate,
     { confirmarBajoMinimo = false }: { confirmarBajoMinimo?: boolean } = {},
-  ) {
+  ): Promise<Movimiento> {
     const qs = confirmarBajoMinimo ? "?confirmar_bajo_minimo=true" : "";
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (isOffline) {
+      return await procesarMovimientoOffline(negocioId, payload);
+    }
     try {
       return await request<Movimiento>(
         `/negocios/${negocioId}/movimientos${qs}`,
@@ -309,6 +413,10 @@ export const api = {
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         throw new StockBajoMinimoError(err.status, err.message, err.detail);
+      }
+      // Error de red (fetch fallido, conexión interrumpida, etc.)
+      if (!(err instanceof ApiError) || err.status >= 500 || err.status === 0) {
+        return await procesarMovimientoOffline(negocioId, payload);
       }
       throw err;
     }
@@ -336,4 +444,11 @@ export const api = {
       `/negocios/${negocioId}/productos/${productoId}/ajustar-stock`,
       json({ delta }),
     ),
+
+  /**
+   * Procesa la cola de sincronización offline enviada por el cliente.
+   * Idempotente por item vía su UUID generado en el cliente.
+   */
+  sync: (negocioId: number, items: ColaSyncItem[]) =>
+    request<ColaSyncResultado[]>(`/negocios/${negocioId}/sync`, json(items)),
 };

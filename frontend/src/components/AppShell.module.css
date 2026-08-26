@@ -93,6 +93,10 @@
   flex: 1;
 }
 
+.sidebarSync {
+  padding: 0 4px 12px;
+}
+
 .sidebarUser {
   display: flex;
   align-items: center;
@@ -138,6 +142,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 22px 20px 4px;
+  gap: 12px;
+}
+
+.mobileHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 @media (min-width: 960px) {
@@ -156,6 +168,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 40px 48px 0;
+    gap: 20px;
   }
 }
 
@@ -164,10 +177,27 @@
   font-weight: 700;
 }
 
+.desktopActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.brand > div {
+  min-width: 0;
+}
+
+.brand .brandName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .logo {
@@ -185,6 +215,9 @@
 .saludo {
   font-size: 12.5px;
   color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .iconButton {
@@ -197,6 +230,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.iconButton:hover {
+  background: var(--line);
+  color: var(--ink);
 }
 
 .content {
@@ -249,4 +289,119 @@
 .bottomNavItemActive {
   color: var(--ink);
   font-weight: 600;
+}
+
+/* --- Badge de Conectividad y Sincronización --- */
+
+.syncBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.syncBadgeCompact {
+  padding: 5px 9px;
+  font-size: 11px;
+}
+
+.syncBadgeOnline {
+  background: oklch(0.65 0.16 160 / 0.12);
+  border-color: oklch(0.65 0.16 160 / 0.25);
+  color: oklch(0.4 0.16 160);
+}
+
+.sidebar .syncBadgeOnline {
+  background: oklch(0.65 0.16 160 / 0.15);
+  color: oklch(0.78 0.14 160);
+  border-color: oklch(0.65 0.16 160 / 0.25);
+}
+
+.onlineDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: oklch(0.65 0.18 160);
+  box-shadow: 0 0 6px oklch(0.65 0.18 160 / 0.7);
+}
+
+.syncBadgeOffline {
+  background: oklch(0.65 0.18 45 / 0.15);
+  border-color: oklch(0.65 0.18 45 / 0.35);
+  color: oklch(0.48 0.18 45);
+}
+
+.sidebar .syncBadgeOffline {
+  background: oklch(0.65 0.18 45 / 0.2);
+  color: oklch(0.8 0.16 45);
+}
+
+.pendingPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background: oklch(0.55 0.2 45);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.syncBadgePending {
+  background: oklch(0.7 0.16 75 / 0.15);
+  border-color: oklch(0.7 0.16 75 / 0.35);
+  color: oklch(0.45 0.16 75);
+  cursor: pointer;
+}
+
+.syncBadgePending:hover {
+  background: oklch(0.7 0.16 75 / 0.25);
+  border-color: oklch(0.7 0.16 75 / 0.5);
+  transform: translateY(-1px);
+}
+
+.sidebar .syncBadgePending {
+  background: oklch(0.7 0.16 75 / 0.2);
+  color: oklch(0.85 0.14 75);
+}
+
+.syncActionHint {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+.syncBadgeSyncing {
+  background: oklch(0.65 0.16 195 / 0.15);
+  border-color: oklch(0.65 0.16 195 / 0.35);
+  color: oklch(0.4 0.16 195);
+}
+
+.sidebar .syncBadgeSyncing {
+  background: oklch(0.65 0.16 195 / 0.2);
+  color: oklch(0.8 0.14 195);
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

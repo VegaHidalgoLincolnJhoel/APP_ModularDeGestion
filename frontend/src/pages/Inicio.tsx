@@ -63,6 +63,7 @@ export default function Inicio() {
       saludo={`${config.saludoFallback}, ${negocio.nombre}`}
       navItems={navItemsFor(tipo)}
       activeId="inicio"
+      negocioId={negocio.id}
     >
       {vencidos.length > 0 && (
         <AlertBanner
