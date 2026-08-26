@@ -202,6 +202,28 @@ export const SyncIcon = (p: IconProps) =>
     </>,
   );
 
+export const PrintIcon = (p: IconProps) =>
+  svg(
+    p,
+    <>
+      <path d="M6 9V2h12v7" />
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+      <path d="M6 14h12v8H6z" />
+    </>,
+  );
+
+export const ShareIcon = (p: IconProps) =>
+  svg(
+    p,
+    <>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+    </>,
+  );
+
 export const WifiOffIcon = (p: IconProps) =>
   svg(
     p,

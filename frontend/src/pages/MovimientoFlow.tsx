@@ -6,7 +6,13 @@ import { EmptyState } from "../components/EmptyState";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { useProductos } from "../api/useProductos";
 import { useUsuarioPrincipal } from "../api/useUsuarioPrincipal";
-import { api, ApiError, StockBajoMinimoError, type Producto } from "../api/client";
+import {
+  api,
+  ApiError,
+  StockBajoMinimoError,
+  type Movimiento,
+  type Producto,
+} from "../api/client";
 import { formatMoney, parseMoneyInput } from "../lib/format";
 import { esCapital, esProductoNuevo, esProductoUsado, getEstadoUsoBadge } from "../lib/contabilidad";
 import { buscarAccion } from "../data/negociosConfig";
@@ -15,8 +21,12 @@ import {
   AlertTriangleIcon,
   CardIcon,
   CashIcon,
+  ChatIcon,
   CheckIcon,
   ChevronLeftIcon,
+  PlusIcon,
+  PrintIcon,
+  ReceiptIcon,
 } from "../components/icons/Icons";
 import styles from "./MovimientoFlow.module.css";
 
@@ -45,6 +55,10 @@ export default function MovimientoFlow() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState(false);
+
+  // Estados para Ticket Digital por WhatsApp e Impresión
+  const [movimientoCreado, setMovimientoCreado] = useState<Movimiento | null>(null);
+  const [telefonoTicket, setTelefonoTicket] = useState("");
 
   const accion = accionId ? buscarAccion(tipo, accionId) : undefined;
 
@@ -82,7 +96,7 @@ export default function MovimientoFlow() {
     setEnviando(true);
     setError(null);
     try {
-      await api.createMovimiento(
+      const creado = await api.createMovimiento(
         negocio.id,
         {
           // Sigue sin haber login por empleado (CLAUDE.md, "Fuera de
@@ -103,6 +117,7 @@ export default function MovimientoFlow() {
         },
         { confirmarBajoMinimo },
       );
+      setMovimientoCreado(creado);
       setExito(true);
       recargar();
     } catch (err) {
@@ -118,7 +133,60 @@ export default function MovimientoFlow() {
     }
   }
 
+  // Generar texto estructurado para WhatsApp
+  const generarTextoWhatsApp = () => {
+    if (!negocio || !productoElegido) return "";
+    const fechaHora = new Date().toLocaleString("es-PE", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+    const metodo =
+      metodoPago === "efectivo" ? "Efectivo" : "Digital (Yape / Plin / Tarjeta)";
+    const detalleCondicion = productoElegido.estado_uso
+      ? esProductoNuevo(productoElegido.estado_uso)
+        ? "Nuevo"
+        : "De segunda"
+      : "";
+
+    let texto = `*🧾 COMPROBANTE DE ATENCIÓN*\n`;
+    texto += `🏢 *${negocio.nombre}*\n`;
+    texto += `📅 Fecha: ${fechaHora}\n`;
+    if (movimientoCreado?.id) {
+      texto += `🔖 Ticket N°: #${String(movimientoCreado.id).padStart(5, "0")}\n`;
+    }
+    texto += `----------------------------------------\n`;
+    texto += `✅ *${productoElegido.nombre}*\n`;
+    if (productoElegido.medida) texto += `• Medida: ${productoElegido.medida}\n`;
+    if (productoElegido.marca) texto += `• Marca: ${productoElegido.marca}\n`;
+    if (detalleCondicion) texto += `• Condición: ${detalleCondicion}\n`;
+    texto += `• Cantidad: 1\n`;
+    texto += `\n💰 Total Pagado: *S/ ${Number(parseMoneyInput(precioFinal)).toFixed(2)}*\n`;
+    texto += `💳 Método de Pago: ${metodo}\n`;
+    texto += `----------------------------------------\n`;
+    texto += `¡Muchas gracias por su preferencia! 🙏✨\n`;
+    return texto;
+  };
+
+  const enviarTicketWhatsApp = () => {
+    const texto = generarTextoWhatsApp();
+    const cleanPhone = telefonoTicket.replace(/\D/g, "");
+    const targetPhone = cleanPhone.length === 9 ? `51${cleanPhone}` : cleanPhone;
+    const url = targetPhone
+      ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(texto)}`
+      : `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(url, "_blank");
+  };
+
+  const imprimirTicket = () => {
+    window.print();
+  };
+
   if (exito) {
+    const fechaHora = new Date().toLocaleString("es-PE", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+
     return (
       <AppShell
         logo={<config.logo size={20} />}
@@ -128,12 +196,136 @@ export default function MovimientoFlow() {
         activeId="inicio"
         negocioId={negocio.id}
       >
-        <EmptyState
-          icon={<CheckIcon size={24} />}
-          title="Listo, quedó registrado"
-          message={`${accion.label} · ${productoElegido?.nombre ?? ""}`}
-          action={<Button onClick={() => navigate(`/${tipo}`)}>Volver a Inicio</Button>}
-        />
+        <div className={styles.ticketContainer}>
+          {/* Tarjeta de Ticket Estilo Recibo Físico */}
+          <div className={styles.ticketCard} id="seccion-ticket-imprimible">
+            <div className={styles.ticketHeader}>
+              <div className={styles.ticketBadge}>
+                <ReceiptIcon size={24} />
+              </div>
+              <h2 className={styles.ticketBusinessName}>{negocio.nombre}</h2>
+              <span className={styles.ticketSubtitle}>Comprobante de Atención</span>
+              {movimientoCreado?.id && (
+                <span className={styles.ticketNumber}>
+                  Ticket #{String(movimientoCreado.id).padStart(5, "0")}
+                </span>
+              )}
+              <span className={styles.ticketDate}>{fechaHora}</span>
+            </div>
+
+            <div className={styles.ticketDivider} />
+
+            <div className={styles.ticketBody}>
+              <div className={styles.ticketItemRow}>
+                <div>
+                  <span className={styles.ticketItemName}>{productoElegido?.nombre}</span>
+                  <div className={styles.ticketItemDetails}>
+                    {productoElegido?.medida && <span>Medida: {productoElegido.medida}</span>}
+                    {productoElegido?.marca && <span>Marca: {productoElegido.marca}</span>}
+                    {productoElegido?.estado_uso && (
+                      <span className={styles.ticketConditionBadge}>
+                        {esProductoNuevo(productoElegido.estado_uso)
+                          ? "Nuevo"
+                          : "De segunda"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className={styles.ticketItemPrice}>
+                  S/ {Number(parseMoneyInput(precioFinal)).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.ticketDivider} />
+
+            <div className={styles.ticketSummary}>
+              <div className={styles.ticketTotalRow}>
+                <span>TOTAL PAGADO</span>
+                <span className={styles.ticketTotalAmount}>
+                  S/ {Number(parseMoneyInput(precioFinal)).toFixed(2)}
+                </span>
+              </div>
+              <div className={styles.ticketPaymentRow}>
+                <span>Método de pago</span>
+                <span className={styles.ticketPaymentBadge}>
+                  {metodoPago === "efectivo" ? "Efectivo" : "Digital (Yape / Plin)"}
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.ticketFooter}>
+              <p>¡Gracias por su preferencia!</p>
+            </div>
+          </div>
+
+          {/* Acciones del Ticket: WhatsApp e Impresión */}
+          <div className={styles.ticketActionsCard}>
+            <h3 className={styles.ticketActionsTitle}>Compartir con el Cliente</h3>
+
+            <div className={styles.phoneInputGroup}>
+              <label className={styles.phoneLabel}>
+                <span>Número de WhatsApp (opcional)</span>
+                <div className={styles.phoneInputWrapper}>
+                  <span className={styles.phonePrefix}>+51</span>
+                  <input
+                    type="tel"
+                    className={styles.phoneInput}
+                    placeholder="987 654 321"
+                    maxLength={9}
+                    value={telefonoTicket}
+                    onChange={(e) => setTelefonoTicket(e.target.value)}
+                  />
+                </div>
+              </label>
+
+              <Button
+                variant="primary"
+                onClick={enviarTicketWhatsApp}
+                className={styles.whatsappBtn}
+              >
+                <ChatIcon size={18} />
+                <span>Enviar Ticket por WhatsApp</span>
+              </Button>
+            </div>
+
+            <div className={styles.secondaryActionsRow}>
+              <Button
+                variant="outline"
+                onClick={imprimirTicket}
+                className={styles.printBtn}
+              >
+                <PrintIcon size={18} />
+                <span>Imprimir Recibo</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPaso("elegir");
+                  setMedidaElegida(null);
+                  setProductoElegido(null);
+                  setPrecioFinal("");
+                  setMontoCapital("");
+                  setExito(false);
+                  setMovimientoCreado(null);
+                  setTelefonoTicket("");
+                }}
+              >
+                <PlusIcon size={18} />
+                <span>Nueva Venta</span>
+              </Button>
+            </div>
+
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/${tipo}`)}
+              className={styles.backHomeBtn}
+            >
+              <span>Volver a Inicio</span>
+            </Button>
+          </div>
+        </div>
       </AppShell>
     );
   }
