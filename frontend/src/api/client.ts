@@ -6,9 +6,11 @@
 
 import {
   actualizarStockOptimista,
+  deleteProductoCache,
   encolarSyncItem,
   generateUUID,
   getProductosCache,
+  saveProductoCache,
   saveProductosCache,
 } from "../lib/offlineStore";
 import { syncManager } from "../lib/syncManager";
@@ -194,6 +196,19 @@ export interface ProductoCreate {
   stock_actual?: number;
   stock_minimo?: number;
   activo?: boolean;
+}
+
+export interface ProductoUpdate {
+  nombre?: string | null;
+  medida?: string | null;
+  marca?: string | null;
+  estado_uso?: string | null;
+  precio_lista?: string | null;
+  precio_compra?: string | null;
+  clasificacion?: string | null;
+  stock_actual?: number | null;
+  stock_minimo?: number | null;
+  activo?: boolean | null;
 }
 
 export interface ProductoCandidatoDuplicado {
@@ -442,6 +457,39 @@ export const api = {
       }
       throw err;
     }
+  },
+
+  updateProducto: async (
+    negocioId: number,
+    productoId: number,
+    payload: ProductoUpdate,
+  ): Promise<Producto> => {
+    const actualizado = await request<Producto>(
+      `/negocios/${negocioId}/productos/${productoId}`,
+      jsonPatch(payload),
+    );
+    try {
+      await saveProductoCache(actualizado);
+    } catch (e) {
+      console.warn("No se pudo actualizar caché local de producto:", e);
+    }
+    return actualizado;
+  },
+
+  deleteProducto: async (
+    negocioId: number,
+    productoId: number,
+  ): Promise<{ ok: boolean; mensaje: string }> => {
+    const res = await request<{ ok: boolean; mensaje: string }>(
+      `/negocios/${negocioId}/productos/${productoId}`,
+      { method: "DELETE" },
+    );
+    try {
+      await deleteProductoCache(productoId);
+    } catch (e) {
+      console.warn("No se pudo eliminar de caché local de productos:", e);
+    }
+    return res;
   },
 
   /** 403 si el negocio no tiene modulos_activos.clientes_vehiculos — el

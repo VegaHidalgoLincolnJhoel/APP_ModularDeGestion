@@ -295,6 +295,54 @@ paths:
         "409":
           description: Existe(n) producto(s) con nombre parecido; ver `candidatos` en el detalle.
 
+  /negocios/{negocioId}/productos/{productoId}:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+      - name: productoId
+        in: path
+        required: true
+        schema:
+          type: integer
+    patch:
+      tags: [productos]
+      summary: Editar producto o servicio
+      operationId: updateProducto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductoUpdate"
+      responses:
+        "200":
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Producto"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [productos]
+      summary: Eliminar o desactivar producto
+      description: >
+        Desactiva el producto (activo = false) si tiene movimientos o registros de compra
+        asociados, o lo elimina físicamente si no tiene registros vinculados.
+      operationId: deleteProducto
+      responses:
+        "200":
+          description: Producto eliminado o desactivado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  mensaje: { type: string }
+                required: [ok, mensaje]
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /negocios/{negocioId}/productos/{productoId}/ajustar-stock:
     parameters:
       - $ref: "#/components/parameters/negocioId"
@@ -783,6 +831,20 @@ components:
     ProductoCreate:
       $ref: "#/components/schemas/ProductoBase"
       description: negocio_id no va en el body — viene del path /negocios/{negocioId}/productos.
+
+    ProductoUpdate:
+      type: object
+      properties:
+        nombre: { type: string, nullable: true }
+        medida: { type: string, nullable: true }
+        marca: { type: string, nullable: true }
+        estado_uso: { type: string, nullable: true }
+        precio_lista: { type: string, format: decimal, nullable: true }
+        precio_compra: { type: string, format: decimal, nullable: true }
+        clasificacion: { type: string, nullable: true }
+        stock_actual: { type: integer, nullable: true }
+        stock_minimo: { type: integer, nullable: true }
+        activo: { type: boolean, nullable: true }
 
     ProductoAjusteStock:
       type: object

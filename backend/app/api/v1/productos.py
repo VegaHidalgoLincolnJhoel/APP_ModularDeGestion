@@ -4,8 +4,15 @@ from sqlalchemy.orm import Session
 from app.core.auth import verificar_acceso_negocio
 from app.core.duplicados import son_parecidos
 from app.db.session import get_db
+from app.models.movimiento import Movimiento as MovimientoModel
 from app.models.producto import Producto as ProductoModel
-from app.schemas.producto import Producto, ProductoAjusteStock, ProductoCreate
+from app.models.registro_compra import RegistroCompra as RegistroCompraModel
+from app.schemas.producto import (
+    Producto,
+    ProductoAjusteStock,
+    ProductoCreate,
+    ProductoUpdate,
+)
 
 router = APIRouter(
     prefix="/negocios/{negocio_id}/productos",
@@ -97,3 +104,50 @@ def ajustar_stock(
     db.commit()
     db.refresh(producto)
     return producto
+
+
+@router.patch("/{producto_id}", response_model=Producto)
+def update_producto(
+    negocio_id: int,
+    producto_id: int,
+    payload: ProductoUpdate,
+    db: Session = Depends(get_db),
+):
+    """Actualiza los campos provistos del producto o servicio."""
+    producto = _get_producto_o_404(negocio_id, producto_id, db)
+
+    cambios = payload.model_dump(exclude_unset=True)
+    for campo, valor in cambios.items():
+        setattr(producto, campo, valor)
+
+    db.commit()
+    db.refresh(producto)
+    return producto
+
+
+@router.delete("/{producto_id}")
+def delete_producto(
+    negocio_id: int,
+    producto_id: int,
+    db: Session = Depends(get_db),
+):
+    """Desactiva el producto (activo = False) o lo elimina si no tiene movimientos asociados.
+
+    Retorna {"ok": True, "mensaje": "Producto eliminado"}.
+    """
+    producto = _get_producto_o_404(negocio_id, producto_id, db)
+
+    tiene_movimientos = (
+        db.query(MovimientoModel).filter(MovimientoModel.producto_id == producto_id).first() is not None
+        or db.query(RegistroCompraModel).filter(RegistroCompraModel.producto_id == producto_id).first() is not None
+    )
+
+    if tiene_movimientos:
+        producto.activo = False
+        db.commit()
+    else:
+        db.delete(producto)
+        db.commit()
+
+    return {"ok": True, "mensaje": "Producto eliminado"}
+

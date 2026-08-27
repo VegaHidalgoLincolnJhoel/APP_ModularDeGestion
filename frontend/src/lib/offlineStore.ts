@@ -134,6 +134,17 @@ export async function saveProductoCache(producto: Producto): Promise<void> {
   });
 }
 
+export async function deleteProductoCache(productoId: number): Promise<void> {
+  const db = await getDB();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("productos", "readwrite");
+    const store = tx.objectStore("productos");
+    store.delete(productoId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 /**
  * Descuenta o suma stock de manera optimista en la base de datos local.
  * Delta negativo (ej. -1) descuenta una venta offline, delta positivo repone.
