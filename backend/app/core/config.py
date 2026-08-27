@@ -27,7 +27,8 @@ class Settings(BaseSettings):
 
     @property
     def clean_database_url(self) -> str:
-        url = self.database_url.strip()
+        # Eliminar cualquier salto de línea (\n, \r) o espacio accidental al pegar en variables de entorno
+        url = "".join(self.database_url.split())
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+psycopg2://", 1)
         elif url.startswith("postgresql://") and not url.startswith("postgresql+"):
