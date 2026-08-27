@@ -1,19 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { AppShell } from "../components/AppShell";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { useProductos } from "../api/useProductos";
 import { api, type RegistroCompra } from "../api/client";
 import { formatMoney } from "../lib/format";
-import { navItemsFor } from "../data/navigation";
 import { AlertTriangleIcon, ChevronLeftIcon, ReceiptIcon } from "../components/icons/Icons";
 import styles from "./Compras.module.css";
 
 export default function Compras() {
   const navigate = useNavigate();
-  const { tipo, tipoValido, config, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
+  const { tipo, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
   const { productos } = useProductos(negocio?.id);
   const [compras, setCompras] = useState<RegistroCompra[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -49,54 +47,20 @@ export default function Compras() {
     return [...mapa.entries()];
   }, [compras]);
 
-  if (!tipoValido) return <Navigate to="/llanteria" replace />;
-  if (cargandoNegocio) return null;
-
-  if (!negocio) {
-    return (
-      <AppShell
-        logo={<config.logo size={20} />}
-        negocioNombre={config.nombreFallback}
-        saludo="Compras"
-        navItems={navItemsFor(tipo)}
-        activeId="sunat"
-      >
-        <EmptyState
-          icon={<config.logo size={24} />}
-          title="Todavía no hay negocio registrado"
-          message="Volvé a Inicio para crear el negocio de prueba."
-          action={<Button onClick={() => navigate(`/${tipo}`)}>Volver a Inicio</Button>}
-        />
-      </AppShell>
-    );
-  }
+  if (cargandoNegocio || !negocio) return null;
 
   if (!negocio.modulo_rus_activo) {
     return (
-      <AppShell
-        logo={<config.logo size={20} />}
-        negocioNombre={negocio.nombre}
-        saludo="Compras"
-        navItems={navItemsFor(tipo)}
-        activeId="sunat"
-      >
-        <EmptyState
-          icon={<AlertTriangleIcon size={22} />}
-          title="Módulo RUS no activo"
-          message="El historial de compras auditadas solo aplica a negocios con modulo_rus_activo habilitado. Para reponer stock sin ese rastro, usá 'Ajustar' en Stock."
-        />
-      </AppShell>
+      <EmptyState
+        icon={<AlertTriangleIcon size={22} />}
+        title="Módulo RUS no activo"
+        message="El historial de compras auditadas solo aplica a negocios con modulo_rus_activo habilitado. Para reponer stock sin ese rastro, usá 'Ajustar' en Stock."
+      />
     );
   }
 
   return (
-    <AppShell
-      logo={<config.logo size={20} />}
-      negocioNombre={negocio.nombre}
-      saludo="Compras"
-      navItems={navItemsFor(tipo)}
-      activeId="sunat"
-    >
+    <>
       <div className={styles.header}>
         <button type="button" className={styles.back} onClick={() => navigate(`/${tipo}/sunat`)} aria-label="Volver a SUNAT">
           <ChevronLeftIcon size={18} />
@@ -142,6 +106,6 @@ export default function Compras() {
           ))}
         </div>
       )}
-    </AppShell>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { useDestinoSesion } from "./hooks/useDestinoSesion";
 import { RequireAuth } from "./components/RequireAuth";
+import BusinessLayout from "./components/BusinessLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Inicio from "./pages/Inicio";
@@ -35,15 +36,17 @@ export default function App() {
             <Route path="/" element={<RaizRedirect />} />
             <Route path="/negocios" element={<Dashboard />} />
 
-            <Route path="/:negocioTipo" element={<Inicio />} />
-            <Route path="/:negocioTipo/registrar/:accionId" element={<MovimientoFlow />} />
-            <Route path="/:negocioTipo/cierre-caja" element={<CierreCaja />} />
-            <Route path="/:negocioTipo/stock" element={<Stock />} />
-            <Route path="/:negocioTipo/stock/ajustar/:productoId" element={<AjustarStock />} />
-            <Route path="/:negocioTipo/stock/comprar/:productoId" element={<RegistrarCompra />} />
-            <Route path="/:negocioTipo/sunat" element={<Sunat />} />
-            <Route path="/:negocioTipo/compras" element={<Compras />} />
-            <Route path="/:negocioTipo/clientes" element={<ClientesVehiculos />} />
+            <Route path="/:negocioTipo" element={<BusinessLayout />}>
+              <Route index element={<Inicio />} />
+              <Route path="registrar/:accionId" element={<MovimientoFlow />} />
+              <Route path="cierre-caja" element={<CierreCaja />} />
+              <Route path="stock" element={<Stock />} />
+              <Route path="stock/ajustar/:productoId" element={<AjustarStock />} />
+              <Route path="stock/comprar/:productoId" element={<RegistrarCompra />} />
+              <Route path="sunat" element={<Sunat />} />
+              <Route path="compras" element={<Compras />} />
+              <Route path="clientes" element={<ClientesVehiculos />} />
+            </Route>
           </Route>
         </Routes>
       </AuthProvider>

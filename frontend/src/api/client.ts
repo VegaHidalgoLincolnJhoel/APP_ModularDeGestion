@@ -183,6 +183,36 @@ export interface Producto {
   activo: boolean;
 }
 
+export interface ProductoCreate {
+  nombre: string;
+  medida?: string | null;
+  marca?: string | null;
+  estado_uso?: string | null;
+  precio_lista?: string;
+  precio_compra?: string;
+  clasificacion?: string | null;
+  stock_actual?: number;
+  stock_minimo?: number;
+  activo?: boolean;
+}
+
+export interface ProductoCandidatoDuplicado {
+  id: number;
+  nombre: string;
+  medida: string | null;
+  marca: string | null;
+}
+
+export class ProductoDuplicadoError extends ApiError {
+  public candidatos: ProductoCandidatoDuplicado[];
+  constructor(status: number, message: string, detail: unknown) {
+    super(status, message, detail);
+    this.name = "ProductoDuplicadoError";
+    const d = detail as { candidatos?: ProductoCandidatoDuplicado[] } | undefined;
+    this.candidatos = d?.candidatos ?? [];
+  }
+}
+
 export interface ClienteVehiculo {
   id: number;
   negocio_id: number;
@@ -380,6 +410,35 @@ export const api = {
         if (cached.length > 0) {
           return cached;
         }
+      }
+      throw err;
+    }
+  },
+
+  createProducto: async (
+    negocioId: number,
+    payload: ProductoCreate,
+    confirmarNuevo = false,
+  ): Promise<Producto> => {
+    const qs = confirmarNuevo ? "?confirmar_nuevo=true" : "";
+    try {
+      const nuevo = await request<Producto>(
+        `/negocios/${negocioId}/productos${qs}`,
+        json(payload),
+      );
+      try {
+        const actualCache = await getProductosCache(negocioId);
+        await saveProductosCache(negocioId, [
+          ...actualCache.filter((p) => p.id !== nuevo.id),
+          nuevo,
+        ]);
+      } catch (e) {
+        console.warn("No se pudo actualizar caché local de productos:", e);
+      }
+      return nuevo;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        throw new ProductoDuplicadoError(err.status, err.message, err.detail);
       }
       throw err;
     }

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { AppShell } from "../components/AppShell";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
@@ -16,7 +15,6 @@ import {
 import { formatMoney, parseMoneyInput } from "../lib/format";
 import { esCapital, esProductoNuevo, esProductoUsado, getEstadoUsoBadge } from "../lib/contabilidad";
 import { buscarAccion } from "../data/negociosConfig";
-import { navItemsFor } from "../data/navigation";
 import {
   AlertTriangleIcon,
   CardIcon,
@@ -40,7 +38,7 @@ const PASOS: { id: Paso; label: string }[] = [
 export default function MovimientoFlow() {
   const navigate = useNavigate();
   const { accionId } = useParams<{ accionId: string }>();
-  const { tipo, tipoValido, config, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
+  const { tipo, tipoValido, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
   const { productos, loading: cargandoProductos, recargar } = useProductos(negocio?.id);
   const { usuarioId, error: errorUsuario } = useUsuarioPrincipal(negocio?.id);
 
@@ -66,26 +64,7 @@ export default function MovimientoFlow() {
     return <Navigate to={tipoValido ? `/${tipo}` : "/llanteria"} replace />;
   }
 
-  if (cargandoNegocio) return null;
-
-  if (!negocio) {
-    return (
-      <AppShell
-        logo={<config.logo size={20} />}
-        negocioNombre={config.nombreFallback}
-        saludo={accion.label}
-        navItems={navItemsFor(tipo)}
-        activeId="inicio"
-      >
-        <EmptyState
-          icon={<config.logo size={24} />}
-          title="Todavía no hay negocio registrado"
-          message="Volvé a Inicio para crear el negocio de prueba antes de registrar movimientos."
-          action={<Button onClick={() => navigate(`/${tipo}`)}>Volver a Inicio</Button>}
-        />
-      </AppShell>
-    );
-  }
+  if (cargandoNegocio || !negocio) return null;
 
   async function enviar(confirmarBajoMinimo = false) {
     if (!negocio || !productoElegido) return;
@@ -188,145 +167,136 @@ export default function MovimientoFlow() {
     });
 
     return (
-      <AppShell
-        logo={<config.logo size={20} />}
-        negocioNombre={negocio.nombre}
-        saludo={accion.label}
-        navItems={navItemsFor(tipo)}
-        activeId="inicio"
-        negocioId={negocio.id}
-      >
-        <div className={styles.ticketContainer}>
-          {/* Tarjeta de Ticket Estilo Recibo Físico */}
-          <div className={styles.ticketCard} id="seccion-ticket-imprimible">
-            <div className={styles.ticketHeader}>
-              <div className={styles.ticketBadge}>
-                <ReceiptIcon size={24} />
-              </div>
-              <h2 className={styles.ticketBusinessName}>{negocio.nombre}</h2>
-              <span className={styles.ticketSubtitle}>Comprobante de Atención</span>
-              {movimientoCreado?.id && (
-                <span className={styles.ticketNumber}>
-                  Ticket #{String(movimientoCreado.id).padStart(5, "0")}
-                </span>
-              )}
-              <span className={styles.ticketDate}>{fechaHora}</span>
+      <div className={styles.ticketContainer}>
+        {/* Tarjeta de Ticket Estilo Recibo Físico */}
+        <div className={styles.ticketCard} id="seccion-ticket-imprimible">
+          <div className={styles.ticketHeader}>
+            <div className={styles.ticketBadge}>
+              <ReceiptIcon size={24} />
             </div>
+            <h2 className={styles.ticketBusinessName}>{negocio.nombre}</h2>
+            <span className={styles.ticketSubtitle}>Comprobante de Atención</span>
+            {movimientoCreado?.id && (
+              <span className={styles.ticketNumber}>
+                Ticket #{String(movimientoCreado.id).padStart(5, "0")}
+              </span>
+            )}
+            <span className={styles.ticketDate}>{fechaHora}</span>
+          </div>
 
-            <div className={styles.ticketDivider} />
+          <div className={styles.ticketDivider} />
 
-            <div className={styles.ticketBody}>
-              <div className={styles.ticketItemRow}>
-                <div>
-                  <span className={styles.ticketItemName}>{productoElegido?.nombre}</span>
-                  <div className={styles.ticketItemDetails}>
-                    {productoElegido?.medida && <span>Medida: {productoElegido.medida}</span>}
-                    {productoElegido?.marca && <span>Marca: {productoElegido.marca}</span>}
-                    {productoElegido?.estado_uso && (
-                      <span className={styles.ticketConditionBadge}>
-                        {esProductoNuevo(productoElegido.estado_uso)
-                          ? "Nuevo"
-                          : "De segunda"}
-                      </span>
-                    )}
-                  </div>
+          <div className={styles.ticketBody}>
+            <div className={styles.ticketItemRow}>
+              <div>
+                <span className={styles.ticketItemName}>{productoElegido?.nombre}</span>
+                <div className={styles.ticketItemDetails}>
+                  {productoElegido?.medida && <span>Medida: {productoElegido.medida}</span>}
+                  {productoElegido?.marca && <span>Marca: {productoElegido.marca}</span>}
+                  {productoElegido?.estado_uso && (
+                    <span className={styles.ticketConditionBadge}>
+                      {esProductoNuevo(productoElegido.estado_uso)
+                        ? "Nuevo"
+                        : "De segunda"}
+                    </span>
+                  )}
                 </div>
-                <span className={styles.ticketItemPrice}>
-                  S/ {Number(parseMoneyInput(precioFinal)).toFixed(2)}
-                </span>
               </div>
-            </div>
-
-            <div className={styles.ticketDivider} />
-
-            <div className={styles.ticketSummary}>
-              <div className={styles.ticketTotalRow}>
-                <span>TOTAL PAGADO</span>
-                <span className={styles.ticketTotalAmount}>
-                  S/ {Number(parseMoneyInput(precioFinal)).toFixed(2)}
-                </span>
-              </div>
-              <div className={styles.ticketPaymentRow}>
-                <span>Método de pago</span>
-                <span className={styles.ticketPaymentBadge}>
-                  {metodoPago === "efectivo" ? "Efectivo" : "Digital (Yape / Plin)"}
-                </span>
-              </div>
-            </div>
-
-            <div className={styles.ticketFooter}>
-              <p>¡Gracias por su preferencia!</p>
+              <span className={styles.ticketItemPrice}>
+                S/ {Number(parseMoneyInput(precioFinal)).toFixed(2)}
+              </span>
             </div>
           </div>
 
-          {/* Acciones del Ticket: WhatsApp e Impresión */}
-          <div className={styles.ticketActionsCard}>
-            <h3 className={styles.ticketActionsTitle}>Compartir con el Cliente</h3>
+          <div className={styles.ticketDivider} />
 
-            <div className={styles.phoneInputGroup}>
-              <label className={styles.phoneLabel}>
-                <span>Número de WhatsApp (opcional)</span>
-                <div className={styles.phoneInputWrapper}>
-                  <span className={styles.phonePrefix}>+51</span>
-                  <input
-                    type="tel"
-                    className={styles.phoneInput}
-                    placeholder="987 654 321"
-                    maxLength={9}
-                    value={telefonoTicket}
-                    onChange={(e) => setTelefonoTicket(e.target.value)}
-                  />
-                </div>
-              </label>
-
-              <Button
-                variant="primary"
-                onClick={enviarTicketWhatsApp}
-                className={styles.whatsappBtn}
-              >
-                <ChatIcon size={18} />
-                <span>Enviar Ticket por WhatsApp</span>
-              </Button>
+          <div className={styles.ticketSummary}>
+            <div className={styles.ticketTotalRow}>
+              <span>TOTAL PAGADO</span>
+              <span className={styles.ticketTotalAmount}>
+                S/ {Number(parseMoneyInput(precioFinal)).toFixed(2)}
+              </span>
             </div>
-
-            <div className={styles.secondaryActionsRow}>
-              <Button
-                variant="outline"
-                onClick={imprimirTicket}
-                className={styles.printBtn}
-              >
-                <PrintIcon size={18} />
-                <span>Imprimir Recibo</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setPaso("elegir");
-                  setMedidaElegida(null);
-                  setProductoElegido(null);
-                  setPrecioFinal("");
-                  setMontoCapital("");
-                  setExito(false);
-                  setMovimientoCreado(null);
-                  setTelefonoTicket("");
-                }}
-              >
-                <PlusIcon size={18} />
-                <span>Nueva Venta</span>
-              </Button>
+            <div className={styles.ticketPaymentRow}>
+              <span>Método de pago</span>
+              <span className={styles.ticketPaymentBadge}>
+                {metodoPago === "efectivo" ? "Efectivo" : "Digital (Yape / Plin)"}
+              </span>
             </div>
+          </div>
 
-            <Button
-              variant="ghost"
-              onClick={() => navigate(`/${tipo}`)}
-              className={styles.backHomeBtn}
-            >
-              <span>Volver a Inicio</span>
-            </Button>
+          <div className={styles.ticketFooter}>
+            <p>¡Gracias por su preferencia!</p>
           </div>
         </div>
-      </AppShell>
+
+        {/* Acciones del Ticket: WhatsApp e Impresión */}
+        <div className={styles.ticketActionsCard}>
+          <h3 className={styles.ticketActionsTitle}>Compartir con el Cliente</h3>
+
+          <div className={styles.phoneInputGroup}>
+            <label className={styles.phoneLabel}>
+              <span>Número de WhatsApp (opcional)</span>
+              <div className={styles.phoneInputWrapper}>
+                <span className={styles.phonePrefix}>+51</span>
+                <input
+                  type="tel"
+                  className={styles.phoneInput}
+                  placeholder="987 654 321"
+                  maxLength={9}
+                  value={telefonoTicket}
+                  onChange={(e) => setTelefonoTicket(e.target.value)}
+                />
+              </div>
+            </label>
+
+            <Button
+              variant="primary"
+              onClick={enviarTicketWhatsApp}
+              className={styles.whatsappBtn}
+            >
+              <ChatIcon size={18} />
+              <span>Enviar Ticket por WhatsApp</span>
+            </Button>
+          </div>
+
+          <div className={styles.secondaryActionsRow}>
+            <Button
+              variant="outline"
+              onClick={imprimirTicket}
+              className={styles.printBtn}
+            >
+              <PrintIcon size={18} />
+              <span>Imprimir Recibo</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPaso("elegir");
+                setMedidaElegida(null);
+                setProductoElegido(null);
+                setPrecioFinal("");
+                setMontoCapital("");
+                setExito(false);
+                setMovimientoCreado(null);
+                setTelefonoTicket("");
+              }}
+            >
+              <PlusIcon size={18} />
+              <span>Nueva Venta</span>
+            </Button>
+          </div>
+
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/${tipo}`)}
+            className={styles.backHomeBtn}
+          >
+            <span>Volver a Inicio</span>
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -350,14 +320,7 @@ export default function MovimientoFlow() {
   const opciones = medidaElegida ? candidatosFiltrados.filter((p) => p.medida === medidaElegida) : candidatosFiltrados;
 
   return (
-    <AppShell
-      logo={<config.logo size={20} />}
-      negocioNombre={negocio.nombre}
-      saludo={accion.label}
-      navItems={navItemsFor(tipo)}
-      activeId="inicio"
-      negocioId={negocio.id}
-    >
+    <>
       <div className={styles.header}>
         <button
           type="button"
@@ -702,6 +665,6 @@ export default function MovimientoFlow() {
           </section>
         );
       })()}
-    </AppShell>
+    </>
   );
 }

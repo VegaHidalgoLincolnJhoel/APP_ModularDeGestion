@@ -1,66 +1,47 @@
 import { useState } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { AppShell } from "../components/AppShell";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { useProductos } from "../api/useProductos";
 import { api, ApiError } from "../api/client";
 import { formatMoney, parseMoneyInput, todayKey } from "../lib/format";
-import { navItemsFor } from "../data/navigation";
 import { AlertTriangleIcon, ChevronLeftIcon, PlusIcon } from "../components/icons/Icons";
 import styles from "./AjustarStock.module.css";
 
 export default function RegistrarCompra() {
   const navigate = useNavigate();
   const { productoId } = useParams<{ productoId: string }>();
-  const { tipo, tipoValido, config, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
+  const { tipo, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
   const { productos, loading: cargandoProductos, recargar } = useProductos(negocio?.id);
   const [cantidad, setCantidad] = useState("1");
   const [costoUnitario, setCostoUnitario] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!tipoValido) return <Navigate to="/llanteria" replace />;
   if (cargandoNegocio || cargandoProductos) return null;
 
   const producto = productos.find((p) => p.id === Number(productoId));
 
   if (!negocio || !producto) {
     return (
-      <AppShell
-        logo={<config.logo size={20} />}
-        negocioNombre={config.nombreFallback}
-        saludo="Registrar compra"
-        navItems={navItemsFor(tipo)}
-        activeId="stock"
-      >
-        <EmptyState
-          icon={<PlusIcon size={22} />}
-          title="No se encontró el producto"
-          message="Puede que ya no exista o haya cambiado de id."
-          action={<Button onClick={() => navigate(`/${tipo}/stock`)}>Volver a Stock</Button>}
-        />
-      </AppShell>
+      <EmptyState
+        icon={<PlusIcon size={22} />}
+        title="No se encontró el producto"
+        message="Puede que ya no exista o haya cambiado de id."
+        action={<Button onClick={() => navigate(`/${tipo}/stock`)}>Volver a Stock</Button>}
+      />
     );
   }
 
   if (!negocio.modulo_rus_activo) {
     return (
-      <AppShell
-        logo={<config.logo size={20} />}
-        negocioNombre={negocio.nombre}
-        saludo="Registrar compra"
-        navItems={navItemsFor(tipo)}
-        activeId="stock"
-      >
-        <EmptyState
-          icon={<AlertTriangleIcon size={22} />}
-          title="Módulo RUS no activo"
-          message="Este negocio no tiene modulo_rus_activo — usá 'Ajustar' en la card del producto para reponer stock sin quedar en el historial de SUNAT."
-          action={<Button onClick={() => navigate(`/${tipo}/stock`)}>Volver a Stock</Button>}
-        />
-      </AppShell>
+      <EmptyState
+        icon={<AlertTriangleIcon size={22} />}
+        title="Módulo RUS no activo"
+        message="Este negocio no tiene modulo_rus_activo — usá 'Ajustar' en la card del producto para reponer stock sin quedar en el historial de SUNAT."
+        action={<Button onClick={() => navigate(`/${tipo}/stock`)}>Volver a Stock</Button>}
+      />
     );
   }
 
@@ -87,13 +68,7 @@ export default function RegistrarCompra() {
   }
 
   return (
-    <AppShell
-      logo={<config.logo size={20} />}
-      negocioNombre={negocio.nombre}
-      saludo="Registrar compra"
-      navItems={navItemsFor(tipo)}
-      activeId="stock"
-    >
+    <>
       <div className={styles.header}>
         <button type="button" className={styles.back} onClick={() => navigate(`/${tipo}/stock`)} aria-label="Volver a stock">
           <ChevronLeftIcon size={18} />
@@ -143,6 +118,6 @@ export default function RegistrarCompra() {
           {enviando ? "Registrando…" : "Registrar compra"}
         </Button>
       </div>
-    </AppShell>
+    </>
   );
 }

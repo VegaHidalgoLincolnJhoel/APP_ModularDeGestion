@@ -1,19 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { AppShell } from "../components/AppShell";
-import { Button } from "../components/Button";
-import { EmptyState } from "../components/EmptyState";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { useProductos } from "../api/useProductos";
 import { api, type CierreCaja as CierreCajaType, type Movimiento } from "../api/client";
 import { formatMoney, todayKey } from "../lib/format";
 import { esCapital } from "../lib/contabilidad";
-import { navItemsFor } from "../data/navigation";
+import { Button } from "../components/Button";
 import styles from "./CierreCaja.module.css";
 
 export default function CierreCaja() {
-  const navigate = useNavigate();
-  const { tipo, tipoValido, config, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
+  const { negocio, loading: cargandoNegocio } = useNegocioDelTipo();
   const { productos } = useProductos(negocio?.id);
 
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
@@ -39,27 +34,7 @@ export default function CierreCaja() {
     };
   }, [negocio]);
 
-  if (!tipoValido) return <Navigate to="/llanteria" replace />;
-  if (cargandoNegocio) return null;
-
-  if (!negocio) {
-    return (
-      <AppShell
-        logo={<config.logo size={20} />}
-        negocioNombre={config.nombreFallback}
-        saludo="Cierre de caja"
-        navItems={navItemsFor(tipo)}
-        activeId="caja"
-      >
-        <EmptyState
-          icon={<config.logo size={24} />}
-          title="Todavía no hay negocio registrado"
-          message="Volvé a Inicio para crear el negocio de prueba."
-          action={<Button onClick={() => navigate(`/${tipo}`)}>Volver a Inicio</Button>}
-        />
-      </AppShell>
-    );
-  }
+  if (cargandoNegocio || !negocio) return null;
 
   return (
     <CierreCajaContenido
@@ -87,8 +62,6 @@ export default function CierreCaja() {
           setCerrando(false);
         }
       }}
-      logo={<config.logo size={20} />}
-      navItems={navItemsFor(tipo)}
     />
   );
 }
@@ -103,12 +76,9 @@ interface ContenidoProps {
   cerrando: boolean;
   error: string | null;
   onCerrar: () => void;
-  logo: JSX.Element;
-  navItems: ReturnType<typeof navItemsFor>;
 }
 
 function CierreCajaContenido({
-  negocioNombre,
   productos,
   movimientos,
   cierreDeHoy,
@@ -116,8 +86,6 @@ function CierreCajaContenido({
   cerrando,
   error,
   onCerrar,
-  logo,
-  navItems,
 }: ContenidoProps) {
   const productosPorId = useMemo(() => new Map(productos.map((p) => [p.id, p])), [productos]);
   const movimientosDeHoy = useMemo(
@@ -153,7 +121,7 @@ function CierreCajaContenido({
   const pctEfectivo = totalBruto ? (totalEfectivo / totalBruto) * 100 : 0;
 
   return (
-    <AppShell logo={logo} negocioNombre={negocioNombre} saludo="Cierre de caja" navItems={navItems} activeId="caja">
+    <>
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Cierre de caja</h1>
@@ -235,7 +203,7 @@ function CierreCajaContenido({
           </table>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }
 

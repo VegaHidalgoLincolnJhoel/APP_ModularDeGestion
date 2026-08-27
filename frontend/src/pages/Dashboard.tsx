@@ -25,6 +25,65 @@ import {
 } from "../components/icons/Icons";
 import styles from "./Dashboard.module.css";
 
+export type SaaSPlanId = "basico" | "profesional" | "full" | "personalizado";
+
+export interface SaaSPlan {
+  id: SaaSPlanId;
+  nombre: string;
+  descripcion: string;
+  badgeLabel: string;
+  modulos: {
+    stock: boolean;
+    clientes_vehiculos: boolean;
+    sunat: boolean;
+    whatsapp: boolean;
+  };
+}
+
+export const SAAS_PLANES: Record<SaaSPlanId, SaaSPlan> = {
+  basico: {
+    id: "basico",
+    nombre: "Plan Básico (Stock)",
+    descripcion: "Control de inventario y caja",
+    badgeLabel: "Plan Básico",
+    modulos: { stock: true, clientes_vehiculos: false, sunat: false, whatsapp: false },
+  },
+  profesional: {
+    id: "profesional",
+    nombre: "Plan Profesional (Taller)",
+    descripcion: "Inventario + Clientes y Vehículos",
+    badgeLabel: "Plan Profesional",
+    modulos: { stock: true, clientes_vehiculos: true, sunat: false, whatsapp: false },
+  },
+  full: {
+    id: "full",
+    nombre: "Plan Full (Empresarial)",
+    descripcion: "Todos los módulos + SUNAT + WhatsApp",
+    badgeLabel: "Plan Full",
+    modulos: { stock: true, clientes_vehiculos: true, sunat: true, whatsapp: true },
+  },
+  personalizado: {
+    id: "personalizado",
+    nombre: "Plan Personalizado",
+    descripcion: "Configuración manual de módulos",
+    badgeLabel: "Personalizado",
+    modulos: { stock: true, clientes_vehiculos: false, sunat: false, whatsapp: false },
+  },
+};
+
+export function detectarPlan(negocio: Negocio): SaaSPlanId {
+  const m = (negocio.modulos_activos || {}) as Record<string, boolean>;
+  const stock = m.stock ?? true;
+  const clientes = m.clientes_vehiculos ?? false;
+  const sunat = negocio.modulo_rus_activo ?? false;
+  const whatsapp = m.whatsapp ?? false;
+
+  if (stock && clientes && sunat && whatsapp) return "full";
+  if (stock && clientes && !sunat && !whatsapp) return "profesional";
+  if (stock && !clientes && !sunat && !whatsapp) return "basico";
+  return "personalizado";
+}
+
 function getRubroIcon(rubro: string) {
   const r = (rubro || "").toLowerCase();
   if (r.includes("llant") || r.includes("neumat")) return <TireIcon size={22} />;
@@ -58,12 +117,13 @@ export default function Dashboard() {
   // Formulario nuevo negocio
   const [rubroSeleccionado, setRubroSeleccionado] = useState<string>("llantería");
   const [customRubroTexto, setCustomRubroTexto] = useState<string>("");
+  const [planAltaSeleccionado, setPlanAltaSeleccionado] = useState<SaaSPlanId>("basico");
   const [nuevoForm, setNuevoForm] = useState({
     nombre: "",
     rubro: "llantería",
     stock: true,
     clientes_vehiculos: false,
-    sunat: true,
+    sunat: false,
     whatsapp: false,
     usuario_nombre: "",
     usuario_username: "",
@@ -157,6 +217,45 @@ export default function Dashboard() {
       alert(err instanceof ApiError ? err.message : "Error al actualizar módulo del negocio.");
     } finally {
       setUpdatingNegocioId(null);
+    }
+  };
+
+  // Aplicar un paquete / plan SaaS preconfigurado en 1 clic
+  const aplicarPlanNegocio = async (negocio: Negocio, planId: SaaSPlanId) => {
+    if (planId === "personalizado") return;
+    const plan = SAAS_PLANES[planId];
+    setUpdatingNegocioId(negocio.id);
+    try {
+      const updated = await api.updateNegocio(negocio.id, {
+        modulo_rus_activo: plan.modulos.sunat,
+        modulos_activos: {
+          stock: plan.modulos.stock,
+          clientes_vehiculos: plan.modulos.clientes_vehiculos,
+          whatsapp: plan.modulos.whatsapp,
+        },
+      });
+      setNegocios((prev) => prev.map((n) => (n.id === negocio.id ? updated : n)));
+      if (negocioUsuariosModal?.id === negocio.id) {
+        setNegocioUsuariosModal(updated);
+      }
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "Error al actualizar plan del negocio.");
+    } finally {
+      setUpdatingNegocioId(null);
+    }
+  };
+
+  const handlePlanAltaChange = (planId: SaaSPlanId) => {
+    setPlanAltaSeleccionado(planId);
+    if (planId !== "personalizado") {
+      const p = SAAS_PLANES[planId];
+      setNuevoForm((prev) => ({
+        ...prev,
+        stock: p.modulos.stock,
+        clientes_vehiculos: p.modulos.clientes_vehiculos,
+        sunat: p.modulos.sunat,
+        whatsapp: p.modulos.whatsapp,
+      }));
     }
   };
 
@@ -462,6 +561,9 @@ export default function Dashboard() {
             const whatsappActivo = modulos.whatsapp ?? false;
             const isUpdating = updatingNegocioId === negocio.id;
 
+            const planActualId = detectarPlan(negocio);
+            const planActual = SAAS_PLANES[planActualId];
+
             return (
               <div key={negocio.id} className={styles.negocioCard}>
                 <div className={styles.cardHeader}>
@@ -474,21 +576,55 @@ export default function Dashboard() {
                       <span className={styles.rubroBadge}>{negocio.rubro}</span>
                     </div>
                   </div>
-                  <span
-                    className={
-                      negocio.plan_estado === "activo"
-                        ? styles.statusActive
-                        : styles.statusInactive
-                    }
-                  >
-                    ● {negocio.plan_estado || "Activo"}
-                  </span>
+                  <div className={styles.cardHeaderRight}>
+                    <span
+                      className={
+                        negocio.plan_estado === "activo"
+                          ? styles.statusActive
+                          : styles.statusInactive
+                      }
+                    >
+                      ● {negocio.plan_estado || "Activo"}
+                    </span>
+                    <span
+                      className={`${styles.planBadge} ${
+                        planActualId === "basico"
+                          ? styles.planBadgeBasico
+                          : planActualId === "profesional"
+                          ? styles.planBadgeProfesional
+                          : planActualId === "full"
+                          ? styles.planBadgeFull
+                          : styles.planBadgePersonalizado
+                      }`}
+                    >
+                      {planActual.badgeLabel}
+                    </span>
+                  </div>
                 </div>
 
                 <div className={styles.divider} />
 
                 {/* Interruptores / Switches de Módulos */}
                 <div className={styles.modulosSection}>
+                  <div className={styles.planSelectorRow}>
+                    <span className={styles.planSelectorLabel}>Plan Asignado:</span>
+                    <select
+                      className={styles.planSelect}
+                      value={planActualId}
+                      disabled={isUpdating}
+                      onChange={(e) =>
+                        aplicarPlanNegocio(negocio, e.target.value as SaaSPlanId)
+                      }
+                    >
+                      <option value="basico">📦 Plan Básico (Stock)</option>
+                      <option value="profesional">🚗 Plan Profesional (Taller)</option>
+                      <option value="full">🚀 Plan Full (Empresarial)</option>
+                      {planActualId === "personalizado" && (
+                        <option value="personalizado">⚙️ Plan Personalizado</option>
+                      )}
+                    </select>
+                  </div>
+
                   <span className={styles.modulosTitle}>Módulos Habilitados</span>
                   <div className={styles.switchesGrid}>
                     {/* Modulo Stock */}
@@ -668,15 +804,39 @@ export default function Dashboard() {
                 )}
 
                 <div className={styles.field}>
+                  <span className={styles.label}>Paquete / Plan SaaS</span>
+                  <div className={styles.planPillsGrid}>
+                    {(Object.keys(SAAS_PLANES) as SaaSPlanId[])
+                      .filter((pid) => pid !== "personalizado")
+                      .map((pid) => {
+                        const p = SAAS_PLANES[pid];
+                        return (
+                          <div
+                            key={pid}
+                            className={`${styles.planPill} ${
+                              planAltaSeleccionado === pid ? styles.planPillActive : ""
+                            }`}
+                            onClick={() => handlePlanAltaChange(pid)}
+                          >
+                            <span className={styles.planPillName}>{p.nombre}</span>
+                            <span className={styles.planPillDesc}>{p.descripcion}</span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                <div className={styles.field}>
                   <span className={styles.label}>Módulos Iniciales Activos</span>
                   <div className={styles.checkboxGroup}>
                     <label className={styles.checkboxLabel}>
                       <input
                         type="checkbox"
                         checked={nuevoForm.stock}
-                        onChange={(e) =>
-                          setNuevoForm({ ...nuevoForm, stock: e.target.checked })
-                        }
+                        onChange={(e) => {
+                          setPlanAltaSeleccionado("personalizado");
+                          setNuevoForm({ ...nuevoForm, stock: e.target.checked });
+                        }}
                       />
                       <span>Inventario / Stock</span>
                     </label>
@@ -685,12 +845,13 @@ export default function Dashboard() {
                       <input
                         type="checkbox"
                         checked={nuevoForm.clientes_vehiculos}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          setPlanAltaSeleccionado("personalizado");
                           setNuevoForm({
                             ...nuevoForm,
                             clientes_vehiculos: e.target.checked,
-                          })
-                        }
+                          });
+                        }}
                       />
                       <span>Cliente - Vehículo</span>
                     </label>
@@ -699,9 +860,10 @@ export default function Dashboard() {
                       <input
                         type="checkbox"
                         checked={nuevoForm.sunat}
-                        onChange={(e) =>
-                          setNuevoForm({ ...nuevoForm, sunat: e.target.checked })
-                        }
+                        onChange={(e) => {
+                          setPlanAltaSeleccionado("personalizado");
+                          setNuevoForm({ ...nuevoForm, sunat: e.target.checked });
+                        }}
                       />
                       <span>SUNAT (RUS)</span>
                     </label>
@@ -710,9 +872,10 @@ export default function Dashboard() {
                       <input
                         type="checkbox"
                         checked={nuevoForm.whatsapp}
-                        onChange={(e) =>
-                          setNuevoForm({ ...nuevoForm, whatsapp: e.target.checked })
-                        }
+                        onChange={(e) => {
+                          setPlanAltaSeleccionado("personalizado");
+                          setNuevoForm({ ...nuevoForm, whatsapp: e.target.checked });
+                        }}
                       />
                       <span>WhatsApp Bot</span>
                     </label>

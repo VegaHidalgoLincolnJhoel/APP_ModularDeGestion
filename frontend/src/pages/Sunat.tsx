@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { AppShell } from "../components/AppShell";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { api, type Movimiento, type RegistroCompra } from "../api/client";
 import { esDelMesActual, formatMoney, nombreMesActual } from "../lib/format";
-import { navItemsFor } from "../data/navigation";
 import { AlertTriangleIcon, ReceiptIcon } from "../components/icons/Icons";
 import styles from "./Sunat.module.css";
 
 export default function Sunat() {
   const navigate = useNavigate();
-  const { tipo, tipoValido, config, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
+  const { tipo, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
 
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [compras, setCompras] = useState<RegistroCompra[]>([]);
@@ -46,43 +44,15 @@ export default function Sunat() {
     };
   }, [negocio]);
 
-  if (!tipoValido) return <Navigate to="/llanteria" replace />;
-  if (cargandoNegocio) return null;
-
-  if (!negocio) {
-    return (
-      <AppShell
-        logo={<config.logo size={20} />}
-        negocioNombre={config.nombreFallback}
-        saludo="SUNAT"
-        navItems={navItemsFor(tipo)}
-        activeId="sunat"
-      >
-        <EmptyState
-          icon={<config.logo size={24} />}
-          title="Todavía no hay negocio registrado"
-          message="Volvé a Inicio para crear el negocio de prueba."
-          action={<Button onClick={() => navigate(`/${tipo}`)}>Volver a Inicio</Button>}
-        />
-      </AppShell>
-    );
-  }
+  if (cargandoNegocio || !negocio) return null;
 
   if (!negocio.modulo_rus_activo) {
     return (
-      <AppShell
-        logo={<config.logo size={20} />}
-        negocioNombre={negocio.nombre}
-        saludo="SUNAT"
-        navItems={navItemsFor(tipo)}
-        activeId="sunat"
-      >
-        <EmptyState
-          icon={<AlertTriangleIcon size={22} />}
-          title="Módulo RUS no activo"
-          message="Esta pestaña solo aplica a negocios con modulo_rus_activo habilitado."
-        />
-      </AppShell>
+      <EmptyState
+        icon={<AlertTriangleIcon size={22} />}
+        title="Módulo RUS no activo"
+        message="Esta pestaña solo aplica a negocios con modulo_rus_activo habilitado."
+      />
     );
   }
 
@@ -111,13 +81,7 @@ export default function Sunat() {
   }
 
   return (
-    <AppShell
-      logo={<config.logo size={20} />}
-      negocioNombre={negocio.nombre}
-      saludo="SUNAT"
-      navItems={navItemsFor(tipo)}
-      activeId="sunat"
-    >
+    <>
       <h1 className={styles.title}>Declaración RUS mensual</h1>
 
       {cercaDelVencimiento && (
@@ -170,6 +134,6 @@ export default function Sunat() {
           {guardando ? "Guardando…" : "Guardar link"}
         </Button>
       </div>
-    </AppShell>
+    </>
   );
 }
