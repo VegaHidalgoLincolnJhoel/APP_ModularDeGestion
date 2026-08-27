@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type Negocio, type NegocioCreate } from "./client";
+import { tipoDesdeRubro } from "../data/negociosConfig";
 
 /**
  * Resuelve el negocio real de un rubro dado (comparando por prefijo,
@@ -28,8 +29,9 @@ export function useNegocio(
     setError(null);
     try {
       const negocios = await api.listNegocios();
+      const rubroBuscado = tipoDesdeRubro(rubro);
       const encontrado = negocios.find(
-        (n) => n.rubro.toLowerCase() === rubro.toLowerCase(),
+        (n) => tipoDesdeRubro(n.rubro) === rubroBuscado,
       );
       setNegocio(encontrado ?? null);
     } catch (err) {

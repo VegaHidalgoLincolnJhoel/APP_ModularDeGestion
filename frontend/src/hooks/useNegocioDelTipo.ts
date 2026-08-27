@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { api, type Negocio } from "../api/client";
 import { useNegocio } from "../api/useNegocio";
 import { useAuth } from "./useAuth";
-import { NEGOCIOS_CONFIG, esNegocioTipo, type NegocioTipo } from "../data/negociosConfig";
+import { NEGOCIOS_CONFIG, esNegocioTipo, type NegocioTipo, tipoDesdeRubro } from "../data/negociosConfig";
 
 /**
  * Resuelve el tipo de negocio a partir de `:negocioTipo` en la ruta y trae
@@ -69,7 +69,7 @@ export function useNegocioDelTipo() {
     return { tipo, tipoValido: tipoValidoParam, config, ...negocioAdmin };
   }
 
-  const rubroCoincide = negocioSesion?.rubro.toLowerCase() === config.rubro.toLowerCase();
+  const rubroCoincide = tipoDesdeRubro(negocioSesion?.rubro) === tipo;
 
   return {
     tipo,
