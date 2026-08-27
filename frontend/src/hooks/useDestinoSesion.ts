@@ -11,9 +11,9 @@ export async function resolverDestino(session: Session): Promise<string> {
   try {
     const negocio = await api.getNegocio(session.negocioId);
     const tipo = tipoDesdeRubro(negocio.rubro);
-    return tipo ? `/${tipo}` : "/negocios";
+    return `/${tipo}`;
   } catch {
-    return "/negocios";
+    return "/llanteria";
   }
 }
 

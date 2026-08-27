@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { useAuth } from "../hooks/useAuth";
 import { resolverDestino } from "../hooks/useDestinoSesion";
@@ -10,7 +10,6 @@ import styles from "./Login.module.css";
 export default function Login() {
   const { session, login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [mostrarPassword, setMostrarPassword] = useState(false);
@@ -28,9 +27,12 @@ export default function Login() {
     setError(null);
     try {
       const nuevaSesion = await login(username, password);
-      const destino = await resolverDestino(nuevaSesion);
-      const origen = (location.state as { from?: Location } | null)?.from;
-      navigate(origen?.pathname ?? destino, { replace: true });
+      if (nuevaSesion.rol === "admin") {
+        navigate("/negocios", { replace: true });
+      } else {
+        const destino = await resolverDestino(nuevaSesion);
+        navigate(destino, { replace: true });
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo iniciar sesión.");
     } finally {

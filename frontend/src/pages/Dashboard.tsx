@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Navigate } from "react-router-dom";
 import {
   api,
   ApiError,
@@ -36,6 +37,11 @@ function getRubroIcon(rubro: string) {
 
 export default function Dashboard() {
   const { session, logout } = useAuth();
+
+  if (session && session.rol !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
   const [negocios, setNegocios] = useState<Negocio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
