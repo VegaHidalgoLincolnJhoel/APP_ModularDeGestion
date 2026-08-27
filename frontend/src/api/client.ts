@@ -502,6 +502,12 @@ export const api = {
   listMovimientos: (negocioId: number) =>
     request<Movimiento[]>(`/negocios/${negocioId}/movimientos`),
 
+  deleteMovimiento: (negocioId: number, movimientoId: number) =>
+    request<{ ok: boolean; mensaje: string }>(
+      `/negocios/${negocioId}/movimientos/${movimientoId}`,
+      { method: "DELETE" },
+    ),
+
   async createMovimiento(
     negocioId: number,
     payload: MovimientoCreate,

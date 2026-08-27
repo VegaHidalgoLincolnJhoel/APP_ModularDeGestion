@@ -25,6 +25,7 @@ import {
   PlusIcon,
   PrintIcon,
   ReceiptIcon,
+  TrashIcon,
 } from "../components/icons/Icons";
 import styles from "./MovimientoFlow.module.css";
 
@@ -57,6 +58,11 @@ export default function MovimientoFlow() {
   // Estados para Ticket Digital por WhatsApp e Impresión
   const [movimientoCreado, setMovimientoCreado] = useState<Movimiento | null>(null);
   const [telefonoTicket, setTelefonoTicket] = useState("");
+
+  // Estado para Anulación de Venta Reciente / Prueba
+  const [modalAnularAbierto, setModalAnularAbierto] = useState(false);
+  const [anulando, setAnulando] = useState(false);
+  const [errorAnular, setErrorAnular] = useState<string | null>(null);
 
   const accion = accionId ? buscarAccion(tipo, accionId) : undefined;
 
@@ -109,6 +115,26 @@ export default function MovimientoFlow() {
       }
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function anularVentaRecienCreada() {
+    if (!negocio || !movimientoCreado) return;
+    setAnulando(true);
+    setErrorAnular(null);
+    try {
+      await api.deleteMovimiento(negocio.id, movimientoCreado.id);
+      await recargar();
+      setModalAnularAbierto(false);
+      navigate(`/${tipo}`, { replace: true });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setErrorAnular(err.message || "No se pudo anular la venta");
+      } else {
+        setErrorAnular(err instanceof Error ? err.message : "Error inesperado al anular la venta");
+      }
+    } finally {
+      setAnulando(false);
     }
   }
 
@@ -281,6 +307,7 @@ export default function MovimientoFlow() {
                 setExito(false);
                 setMovimientoCreado(null);
                 setTelefonoTicket("");
+                setModalAnularAbierto(false);
               }}
             >
               <PlusIcon size={18} />
@@ -290,12 +317,77 @@ export default function MovimientoFlow() {
 
           <Button
             variant="ghost"
+            onClick={() => setModalAnularAbierto(true)}
+            className={styles.anularVentaBtn}
+          >
+            <span>↩️ Anular venta / Prueba</span>
+          </Button>
+
+          <Button
+            variant="ghost"
             onClick={() => navigate(`/${tipo}`)}
             className={styles.backHomeBtn}
           >
             <span>Volver a Inicio</span>
           </Button>
         </div>
+
+        {/* Modal Confirmación Anular Venta / Prueba */}
+        {modalAnularAbierto && (
+          <div
+            className={styles.modalOverlay}
+            onClick={() => !anulando && setModalAnularAbierto(false)}
+          >
+            <div
+              className={styles.modalCard}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className={styles.deleteIconWrap}>
+                <TrashIcon size={24} />
+              </div>
+
+              <h2 className={styles.modalTitle}>¿Anular esta venta recién registrada?</h2>
+
+              <div className={styles.deleteItemSummary}>
+                <span className={styles.deleteItemName}>{productoElegido?.nombre}</span>
+                <span className={styles.deleteItemDetail}>
+                  S/ {Number(parseMoneyInput(precioFinal)).toFixed(2)}
+                </span>
+              </div>
+
+              <p className={styles.deleteWarningNote}>
+                Se devolverá el stock al inventario y se eliminará por completo del registro de caja sin dejar rastro.
+              </p>
+
+              {errorAnular && (
+                <div className={styles.errorBox} role="alert">
+                  <p style={{ margin: 0 }}>{errorAnular}</p>
+                </div>
+              )}
+
+              <div className={styles.modalActions}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setModalAnularAbierto(false)}
+                  disabled={anulando}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={anularVentaRecienCreada}
+                  disabled={anulando}
+                >
+                  {anulando ? "Anulando…" : "Sí, anular venta"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -432,6 +432,35 @@ paths:
             Sin stock disponible, o la venta deja el producto bajo el
             mínimo y falta confirmar_bajo_minimo=true.
 
+  /negocios/{negocioId}/movimientos/{movimientoId}:
+    parameters:
+      - $ref: "#/components/parameters/negocioId"
+      - name: movimientoId
+        in: path
+        required: true
+        schema:
+          type: integer
+    delete:
+      tags: [movimientos]
+      summary: Anular movimiento (venta o servicio)
+      description: >
+        Elimina el registro de la venta o servicio y restaura 1 unidad al stock
+        actual si el producto asociado tiene clasificación capital.
+      operationId: deleteMovimiento
+      responses:
+        "200":
+          description: Movimiento anulado y stock restaurado si corresponde
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  mensaje: { type: string }
+                required: [ok, mensaje]
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /negocios/{negocioId}/cierres-caja:
     parameters:
       - $ref: "#/components/parameters/negocioId"

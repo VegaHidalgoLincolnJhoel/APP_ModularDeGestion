@@ -208,3 +208,158 @@ def test_movimientos_y_cierres_cross_tenant_forbidden(client, seed_data):
         headers=headers,
     )
     assert resp_cierre.status_code == 403
+
+
+def test_anular_movimiento_producto_capital_restaura_stock(client, seed_data, db_session):
+    negocio_id = seed_data["negocio1"].id
+    headers = {"Authorization": f"Bearer {seed_data['token_dueno1']}"}
+
+    prod = ProductoModel(
+        negocio_id=negocio_id,
+        nombre="Llanta 185/65R15",
+        clasificacion="capital",
+        precio_lista=250.0,
+        precio_compra=150.0,
+        stock_actual=5,
+        stock_minimo=1,
+    )
+    db_session.add(prod)
+    db_session.commit()
+    db_session.refresh(prod)
+
+    # 1. Registrar venta -> stock debe descontarse de 5 a 4
+    resp_venta = client.post(
+        f"/api/v1/negocios/{negocio_id}/movimientos",
+        json={
+            "usuario_id": seed_data["dueno1"].id,
+            "producto_id": prod.id,
+            "tipo": "venta",
+            "metodo_pago": "efectivo",
+        },
+        headers=headers,
+    )
+    assert resp_venta.status_code == 201
+    mov_id = resp_venta.json()["id"]
+
+    db_session.refresh(prod)
+    assert prod.stock_actual == 4
+
+    # 2. Anular venta -> stock debe restaurarse a 5
+    resp_delete = client.delete(
+        f"/api/v1/negocios/{negocio_id}/movimientos/{mov_id}",
+        headers=headers,
+    )
+    assert resp_delete.status_code == 200
+    assert resp_delete.json() == {
+        "ok": True,
+        "mensaje": "Movimiento anulado y stock restaurado exitosamente.",
+    }
+
+    db_session.refresh(prod)
+    assert prod.stock_actual == 5
+
+    # 3. Validar que el movimiento ya no existe
+    resp_list = client.get(f"/api/v1/negocios/{negocio_id}/movimientos", headers=headers)
+    ids_en_lista = [m["id"] for m in resp_list.json()]
+    assert mov_id not in ids_en_lista
+
+
+def test_anular_movimiento_servicio_sin_alterar_stock(client, seed_data, db_session):
+    negocio_id = seed_data["negocio1"].id
+    headers = {"Authorization": f"Bearer {seed_data['token_dueno1']}"}
+
+    servicio = ProductoModel(
+        negocio_id=negocio_id,
+        nombre="Lavado de Auto",
+        clasificacion="servicio",
+        precio_lista=30.0,
+        precio_compra=0.0,
+        stock_actual=0,
+        stock_minimo=0,
+    )
+    db_session.add(servicio)
+    db_session.commit()
+    db_session.refresh(servicio)
+
+    resp_venta = client.post(
+        f"/api/v1/negocios/{negocio_id}/movimientos",
+        json={
+            "usuario_id": seed_data["dueno1"].id,
+            "producto_id": servicio.id,
+            "tipo": "servicio",
+            "metodo_pago": "digital",
+        },
+        headers=headers,
+    )
+    assert resp_venta.status_code == 201
+    mov_id = resp_venta.json()["id"]
+
+    db_session.refresh(servicio)
+    assert servicio.stock_actual == 0
+
+    # Anular servicio -> stock sigue en 0
+    resp_delete = client.delete(
+        f"/api/v1/negocios/{negocio_id}/movimientos/{mov_id}",
+        headers=headers,
+    )
+    assert resp_delete.status_code == 200
+    assert resp_delete.json() == {
+        "ok": True,
+        "mensaje": "Movimiento anulado y stock restaurado exitosamente.",
+    }
+
+    db_session.refresh(servicio)
+    assert servicio.stock_actual == 0
+
+
+def test_anular_movimiento_no_encontrado_y_cross_tenant(client, seed_data, db_session):
+    negocio1_id = seed_data["negocio1"].id
+    negocio2_id = seed_data["negocio2"].id
+    headers_dueno1 = {"Authorization": f"Bearer {seed_data['token_dueno1']}"}
+    headers_dueno2 = {"Authorization": f"Bearer {seed_data['token_dueno2']}"}
+
+    prod = ProductoModel(
+        negocio_id=negocio1_id,
+        nombre="Aceite 20W50",
+        clasificacion="capital",
+        precio_lista=40.0,
+        precio_compra=25.0,
+        stock_actual=3,
+        stock_minimo=1,
+    )
+    db_session.add(prod)
+    db_session.commit()
+    db_session.refresh(prod)
+
+    resp_venta = client.post(
+        f"/api/v1/negocios/{negocio1_id}/movimientos",
+        json={
+            "usuario_id": seed_data["dueno1"].id,
+            "producto_id": prod.id,
+            "tipo": "venta",
+            "metodo_pago": "efectivo",
+        },
+        headers=headers_dueno1,
+    )
+    mov_id = resp_venta.json()["id"]
+
+    # 1. 404 al intentar anular ID inexistente en negocio 1
+    resp_404 = client.delete(
+        f"/api/v1/negocios/{negocio1_id}/movimientos/999999",
+        headers=headers_dueno1,
+    )
+    assert resp_404.status_code == 404
+
+    # 2. 403 si dueño 1 intenta anular en la URL de negocio 2
+    resp_cross_url = client.delete(
+        f"/api/v1/negocios/{negocio2_id}/movimientos/{mov_id}",
+        headers=headers_dueno1,
+    )
+    assert resp_cross_url.status_code == 403
+
+    # 3. 404 si dueño 2 intenta anular el movimiento de negocio 1 dentro de su negocio 2
+    resp_cross_mov = client.delete(
+        f"/api/v1/negocios/{negocio2_id}/movimientos/{mov_id}",
+        headers=headers_dueno2,
+    )
+    assert resp_cross_mov.status_code == 404

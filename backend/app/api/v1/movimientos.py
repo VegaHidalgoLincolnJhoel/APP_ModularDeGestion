@@ -55,6 +55,28 @@ def create_movimiento(
     return _crear_movimiento(negocio_id, payload, confirmar_bajo_minimo, db)
 
 
+@router.delete("/{movimiento_id}")
+def delete_movimiento(
+    negocio_id: int,
+    movimiento_id: int,
+    db: Session = Depends(get_db),
+):
+    """Anula un movimiento de venta o servicio y restaura stock si corresponde."""
+    _get_negocio_o_404(negocio_id, db)
+
+    movimiento = db.get(MovimientoModel, movimiento_id)
+    if movimiento is None or movimiento.negocio_id != negocio_id:
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado")
+
+    producto = db.get(ProductoModel, movimiento.producto_id)
+    if producto is not None and es_capital(producto.clasificacion):
+        producto.stock_actual = producto.stock_actual + 1
+
+    db.delete(movimiento)
+    db.commit()
+    return {"ok": True, "mensaje": "Movimiento anulado y stock restaurado exitosamente."}
+
+
 def _crear_movimiento(
     negocio_id: int, payload: MovimientoCreate, confirmar_bajo_minimo: bool, db: Session
 ) -> MovimientoModel:
