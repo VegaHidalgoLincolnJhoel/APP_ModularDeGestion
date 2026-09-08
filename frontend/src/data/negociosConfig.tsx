@@ -55,6 +55,8 @@ export const NEGOCIOS_CONFIG = {
     logo: TireIcon,
     servicios: [
       { id: "parchado", label: "Parchado", icon: WrenchIcon, categoria: "servicio" },
+      { id: "balanceo", label: "Balanceo", icon: GaugeIcon, categoria: "servicio" },
+      { id: "enllante", label: "Enllante", icon: TireIcon, categoria: "servicio" },
       { id: "inflado", label: "Inflado", icon: GaugeIcon, categoria: "servicio" },
     ],
     productos: [
@@ -65,6 +67,7 @@ export const NEGOCIOS_CONFIG = {
         categoria: "producto",
         agruparPorMedida: true,
       },
+      { id: "parches-insumos", label: "Parches e Insumos", icon: WrenchIcon, categoria: "producto" },
       { id: "accesorio", label: "Accesorio", icon: NutIcon, categoria: "producto" },
     ],
     modulosActivosDefault: {},

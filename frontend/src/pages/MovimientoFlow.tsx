@@ -25,8 +25,19 @@ import {
   PlusIcon,
   PrintIcon,
   ReceiptIcon,
+  SearchIcon,
   TrashIcon,
 } from "../components/icons/Icons";
+import {
+  clasificarServicio,
+  clasificarProductoFisico,
+  ordenarProductosDeCategoria,
+  CATEGORIAS_SERVICIOS_INFO,
+  CATEGORIAS_PRODUCTOS_INFO,
+  type SubcategoriaServicio,
+  type SubcategoriaProducto,
+  type InfoCategoriaVisual,
+} from "../lib/catalogoClasificacion";
 import styles from "./MovimientoFlow.module.css";
 
 type Paso = "elegir" | "precio" | "confirmar";
@@ -68,6 +79,21 @@ export default function MovimientoFlow() {
   const [errorAnular, setErrorAnular] = useState<string | null>(null);
 
   const accion = accionId ? buscarAccion(tipo, accionId) : undefined;
+
+  const subcategoriaInicial = (() => {
+    if (!accionId) return "todos";
+    if (accionId === "parchado") return "parchados";
+    if (accionId === "balanceo") return "balanceo";
+    if (accionId === "enllante") return "enllante";
+    if (accionId === "inflado") return "inflado";
+    if (accionId === "parches-insumos") return "parches_insumos";
+    if (accionId === "venta-llanta") return "llantas";
+    if (accionId === "accesorio") return "accesorios";
+    return "todos";
+  })();
+
+  const [filtroSubcategoria, setFiltroSubcategoria] = useState<string>(subcategoriaInicial);
+  const [busqueda, setBusqueda] = useState("");
 
   function cambiarCantidad(nuevaCant: number) {
     const cantValida = Math.max(1, nuevaCant);
@@ -325,6 +351,8 @@ export default function MovimientoFlow() {
                 setMovimientoCreado(null);
                 setTelefonoTicket("");
                 setModalAnularAbierto(false);
+                setBusqueda("");
+                setFiltroSubcategoria(subcategoriaInicial);
               }}
             >
               <PlusIcon size={18} />
@@ -416,7 +444,10 @@ export default function MovimientoFlow() {
     (p) => p.activo && esCapital(p.clasificacion) === (accion.categoria === "producto"),
   );
 
-  const hayProductosConEstado = candidatos.some((p) => Boolean(p.estado_uso)) || accion.agruparPorMedida;
+  const esServicio = accion.categoria === "servicio";
+
+  const hayProductosConEstado =
+    candidatos.some((p) => Boolean(p.estado_uso)) || accion.agruparPorMedida;
 
   const candidatosFiltrados = candidatos.filter((p) => {
     if (filtroEstadoUso === "nuevo") return esProductoNuevo(p.estado_uso);
@@ -424,9 +455,118 @@ export default function MovimientoFlow() {
     return true;
   });
 
-  const medidas = [...new Set(candidatosFiltrados.map((p) => p.medida).filter((m): m is string => Boolean(m)))];
-  const enPasoMedida = accion.agruparPorMedida && !medidaElegida;
-  const opciones = medidaElegida ? candidatosFiltrados.filter((p) => p.medida === medidaElegida) : candidatosFiltrados;
+  // Filtro por búsqueda de texto interactiva
+  const q = busqueda.trim().toLowerCase();
+  const candidatosConBusqueda = candidatosFiltrados.filter((p) => {
+    if (!q) return true;
+    const matchNom = (p.nombre || "").toLowerCase().includes(q);
+    const matchMed = (p.medida || "").toLowerCase().includes(q);
+    const matchMar = (p.marca || "").toLowerCase().includes(q);
+    return matchNom || matchMed || matchMar;
+  });
+
+  // Agrupación y ordenamiento inteligente por categoría
+  const subcatsServicio: SubcategoriaServicio[] = [
+    "parchados",
+    "balanceo",
+    "enllante",
+    "inflado",
+    "otros",
+  ];
+  const subcatsProducto: SubcategoriaProducto[] = [
+    "parches_insumos",
+    "llantas",
+    "aceites",
+    "aditivos",
+    "accesorios",
+    "otros",
+  ];
+
+  const gruposCategorias: { info: InfoCategoriaVisual; items: Producto[] }[] = esServicio
+    ? subcatsServicio.map((catId) => {
+        const items = candidatosConBusqueda.filter((p) => clasificarServicio(p) === catId);
+        return {
+          info: CATEGORIAS_SERVICIOS_INFO[catId],
+          items: ordenarProductosDeCategoria(items, catId),
+        };
+      })
+    : subcatsProducto.map((catId) => {
+        const items = candidatosConBusqueda.filter((p) => clasificarProductoFisico(p) === catId);
+        return {
+          info: CATEGORIAS_PRODUCTOS_INFO[catId],
+          items: ordenarProductosDeCategoria(items, catId),
+        };
+      });
+
+  // Solo categorías que tengan al menos 1 producto según los filtros actuales
+  const categoriasConItems = gruposCategorias.filter((c) => c.items.length > 0);
+
+  // Categorías que se mostrarán en la vista
+  const categoriasAMostrar =
+    filtroSubcategoria === "todos"
+      ? categoriasConItems
+      : categoriasConItems.filter((c) => c.info.id === filtroSubcategoria);
+
+  // Medidas disponibles para llantas (en caso aplique agrupación por medida)
+  const itemsLlantas = candidatosFiltrados.filter(
+    (p) => clasificarProductoFisico(p) === "llantas"
+  );
+  const medidas = [
+    ...new Set(itemsLlantas.map((p) => p.medida).filter((m): m is string => Boolean(m))),
+  ];
+  const enPasoMedida =
+    accion.agruparPorMedida &&
+    !medidaElegida &&
+    (filtroSubcategoria === "llantas" || filtroSubcategoria === "todos") &&
+    !busqueda;
+
+  function seleccionarProducto(p: Producto) {
+    setProductoElegido(p);
+    const pUnit = Number(p.precio_lista) || 0;
+    const cUnit = Number(p.precio_compra) || 0;
+    setPrecioUnitario(pUnit);
+    setCapitalUnitario(cUnit);
+    setCantidad(1);
+    setPrecioFinal(p.precio_lista);
+    setMontoCapital(p.precio_compra ?? "0");
+    setPaso("precio");
+  }
+
+  function renderCardProducto(p: Producto) {
+    const badge = getEstadoUsoBadge(p.estado_uso);
+    return (
+      <button
+        key={p.id}
+        type="button"
+        className={styles.optionRow}
+        onClick={() => seleccionarProducto(p)}
+      >
+        <div className={styles.optionInfo}>
+          <div className={styles.optionHeader}>
+            <span className={styles.optionName}>{p.nombre}</span>
+            {badge && (
+              <span
+                className={
+                  badge.tipo === "nuevo" ? styles.badgeNuevo : styles.badgeUsado
+                }
+              >
+                {badge.label}
+              </span>
+            )}
+          </div>
+          <div className={styles.optionMetaRow}>
+            {p.medida && (
+              <span className={styles.medidaBadge}>
+                {p.medida}
+              </span>
+            )}
+            {p.marca && <span className={styles.marcaBadge}>• {p.marca}</span>}
+          </div>
+        </div>
+        <span className={styles.optionPrice}>{formatMoney(p.precio_lista)}</span>
+      </button>
+    );
+  }
 
   return (
     <>
@@ -459,47 +599,114 @@ export default function MovimientoFlow() {
       </ol>
 
       {paso === "elegir" && (
-        <section className={styles.section}>
+        <section className={styles.sectionElegir}>
           {cargandoProductos ? (
             <p className={styles.muted}>Cargando…</p>
           ) : candidatos.length === 0 ? (
             <EmptyState
               icon={<AlertTriangleIcon size={22} />}
-              title={`No hay ${accion.categoria === "producto" ? "productos" : "servicios"} de este tipo`}
+              title={`No hay ${esServicio ? "servicios" : "productos"} de este tipo`}
               message="Agregalos primero desde Stock para poder registrar esta acción."
               action={<Button onClick={() => navigate(`/${tipo}/stock`)}>Ir a Stock</Button>}
             />
           ) : (
             <>
-              {hayProductosConEstado && (
-                <div className={styles.filterPills} role="group" aria-label="Filtrar por condición">
+              {/* 1. Barra de Filtros por Categoría (Chips / Tabs) */}
+              {categoriasConItems.length > 0 && (
+                <div className={styles.categoryTabsBar} role="tablist" aria-label="Filtrar categoría">
                   <button
                     type="button"
-                    className={`${styles.filterPill} ${filtroEstadoUso === "todas" ? styles.filterPillActive : ""}`}
-                    onClick={() => setFiltroEstadoUso("todas")}
+                    className={`${styles.categoryTab} ${filtroSubcategoria === "todos" ? styles.categoryTabActive : ""}`}
+                    onClick={() => {
+                      setFiltroSubcategoria("todos");
+                      setMedidaElegida(null);
+                    }}
                   >
-                    Todas
+                    <span>📋 Todos</span>
+                    <span className={styles.categoryTabCount}>{candidatosConBusqueda.length}</span>
                   </button>
-                  <button
-                    type="button"
-                    className={`${styles.filterPill} ${filtroEstadoUso === "nuevo" ? styles.filterPillActive : ""}`}
-                    onClick={() => setFiltroEstadoUso("nuevo")}
-                  >
-                    Nuevas
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.filterPill} ${filtroEstadoUso === "usado" ? styles.filterPillActive : ""}`}
-                    onClick={() => setFiltroEstadoUso("usado")}
-                  >
-                    Usadas / Segunda
-                  </button>
+                  {categoriasConItems.map(({ info, items }) => (
+                    <button
+                      key={info.id}
+                      type="button"
+                      className={`${styles.categoryTab} ${filtroSubcategoria === info.id ? styles.categoryTabActive : ""}`}
+                      onClick={() => {
+                        setFiltroSubcategoria(info.id);
+                        setMedidaElegida(null);
+                      }}
+                    >
+                      <span>{info.emoji} {info.label}</span>
+                      <span className={styles.categoryTabCount}>{items.length}</span>
+                    </button>
+                  ))}
                 </div>
               )}
 
+              {/* 2. Filtro de Condición (Nuevo / Usado) y Buscador Rápido */}
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                {hayProductosConEstado && (
+                  <div className={styles.filterPills} role="group" aria-label="Filtrar por condición">
+                    <button
+                      type="button"
+                      className={`${styles.filterPill} ${filtroEstadoUso === "todas" ? styles.filterPillActive : ""}`}
+                      onClick={() => setFiltroEstadoUso("todas")}
+                    >
+                      Todas
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.filterPill} ${filtroEstadoUso === "nuevo" ? styles.filterPillActive : ""}`}
+                      onClick={() => setFiltroEstadoUso("nuevo")}
+                    >
+                      Nuevas
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.filterPill} ${filtroEstadoUso === "usado" ? styles.filterPillActive : ""}`}
+                      onClick={() => setFiltroEstadoUso("usado")}
+                    >
+                      Usadas / Segunda
+                    </button>
+                  </div>
+                )}
+
+                {/* Buscador de texto interactivo */}
+                <div className={styles.searchFilterWrap}>
+                  <span className={styles.searchIcon}>
+                    <SearchIcon size={16} />
+                  </span>
+                  <input
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder={`Buscar ${esServicio ? "servicio" : "producto"} (ej: 00, RAC, balanceo, 185)...`}
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                  />
+                  {busqueda && (
+                    <button
+                      type="button"
+                      onClick={() => setBusqueda("")}
+                      style={{
+                        position: "absolute",
+                        right: "10px",
+                        background: "none",
+                        border: "none",
+                        color: "var(--ink-soft)",
+                        cursor: "pointer",
+                        padding: "4px",
+                      }}
+                      aria-label="Limpiar búsqueda"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. Selección de Medida para Llantas si aplica */}
               {enPasoMedida ? (
                 <>
-                  <p className={styles.stepHint}>Elegí la medida</p>
+                  <p className={styles.stepHint}>Elegí la medida de llanta</p>
                   {medidas.length === 0 ? (
                     <p className={styles.muted}>No hay medidas disponibles con ese filtro.</p>
                   ) : (
@@ -511,7 +718,8 @@ export default function MovimientoFlow() {
                           className={styles.optionRow}
                           onClick={() => setMedidaElegida(medida)}
                         >
-                          <span>{medida}</span>
+                          <span style={{ fontWeight: 600 }}>{medida}</span>
+                          <span className={styles.muted}>Ver marcas →</span>
                         </button>
                       ))}
                     </div>
@@ -519,59 +727,62 @@ export default function MovimientoFlow() {
                 </>
               ) : (
                 <>
-                  <p className={styles.stepHint}>
-                    {accion.agruparPorMedida ? `Marcas en stock — ${medidaElegida}` : "Elegí una opción"}
-                  </p>
-                  {opciones.length === 0 ? (
-                    <p className={styles.muted}>No hay opciones disponibles con ese filtro.</p>
-                  ) : (
-                    <div className={styles.optionList}>
-                      {opciones.map((p) => {
-                        const badge = getEstadoUsoBadge(p.estado_uso);
+                  {medidaElegida && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span className={styles.stepHint}>Marcas en stock para: <strong>{medidaElegida}</strong></span>
+                      <button
+                        type="button"
+                        className={styles.linkBack}
+                        onClick={() => setMedidaElegida(null)}
+                      >
+                        ← Cambiar medida
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 4. Columnas distintas organizadas o categoría específica */}
+                  {categoriasAMostrar.length > 0 ? (
+                    <div className={styles.columnasGrid}>
+                      {categoriasAMostrar.map(({ info, items }) => {
+                        const itemsFinales = medidaElegida
+                          ? items.filter((p) => p.medida === medidaElegida)
+                          : items;
+
+                        if (itemsFinales.length === 0) return null;
+
                         return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            className={styles.optionRow}
-                            onClick={() => {
-                              setProductoElegido(p);
-                              const pUnit = Number(p.precio_lista) || 0;
-                              const cUnit = Number(p.precio_compra) || 0;
-                              setPrecioUnitario(pUnit);
-                              setCapitalUnitario(cUnit);
-                              setCantidad(1);
-                              setPrecioFinal(p.precio_lista);
-                              setMontoCapital(p.precio_compra ?? "0");
-                              setPaso("precio");
-                            }}
-                          >
-                            <div className={styles.optionInfo}>
-                              <div className={styles.optionHeader}>
-                                <span className={styles.optionName}>{p.nombre}</span>
-                                {badge && (
-                                  <span
-                                    className={
-                                      badge.tipo === "nuevo"
-                                        ? styles.badgeNuevo
-                                        : styles.badgeUsado
-                                    }
-                                  >
-                                    {badge.label}
-                                  </span>
-                                )}
+                          <div key={info.id} className={styles.columnaCard}>
+                            <div className={styles.columnaHeader}>
+                              <div className={styles.columnaTitleGroup}>
+                                <span className={styles.columnaEmoji}>{info.emoji}</span>
+                                <h3 className={styles.columnaTitle}>{info.label}</h3>
                               </div>
-                              {p.marca && <div className={styles.optionSub}>{p.marca}</div>}
+                              <span className={styles.columnaBadge}>
+                                {itemsFinales.length} {itemsFinales.length === 1 ? "ítem" : "ítems"}
+                              </span>
                             </div>
-                            <span className={styles.optionPrice}>{formatMoney(p.precio_lista)}</span>
-                          </button>
+
+                            <div className={styles.columnaBody}>
+                              {itemsFinales.map((p) => renderCardProducto(p))}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
-                  )}
-                  {accion.agruparPorMedida && (
-                    <button type="button" className={styles.linkBack} onClick={() => setMedidaElegida(null)}>
-                      ← Cambiar medida
-                    </button>
+                  ) : (
+                    <div className={styles.muted} style={{ textAlign: "center", padding: "28px 0" }}>
+                      <p>No se encontraron ítems en esta sección con los filtros actuales.</p>
+                      {filtroSubcategoria !== "todos" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setFiltroSubcategoria("todos")}
+                        >
+                          Ver todos los {esServicio ? "servicios" : "productos"}
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </>
               )}

@@ -965,6 +965,194 @@
   margin-top: 20px;
 }
 
+/* Responsive container for step "elegir" */
+.sectionElegir {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1080px;
+  width: 100%;
+}
+
+/* Category Tabs */
+.categoryTabsBar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.categoryTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.categoryTab:hover {
+  border-color: var(--producto);
+  background: var(--surface);
+}
+
+.categoryTabActive {
+  background: var(--producto);
+  color: var(--producto-ink, #000);
+  border-color: var(--producto);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.categoryTabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.categoryTabActive .categoryTabCount {
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+}
+
+/* Search bar inside MovimientoFlow */
+.searchFilterWrap {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.searchInput:focus {
+  border-color: var(--producto);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+
+/* Multi-column Grid Layout */
+.columnasGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+  width: 100%;
+  align-items: start;
+}
+
+.columnaCard {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.columnaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.columnaTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.columnaEmoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.columnaTitle {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.columnaBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.columnaBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+
+/* Individual card row adjustments */
+.optionMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.medidaBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.marcaBadge {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
 /* Modo Impresión Térmica */
 @media print {
   body * {
