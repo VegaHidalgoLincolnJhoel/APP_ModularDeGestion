@@ -46,6 +46,126 @@ import styles from "./Stock.module.css";
 type TabPrincipal = "productos" | "servicios" | "todos";
 type VistaStock = "marca" | "general";
 
+/**
+ * Determina la categoría de un producto de forma inteligente según su nombre,
+ * medida y clasificación para los filtros dinámicos.
+ */
+export function obtenerCategoriaProducto(p: Producto): string {
+  if (!esCapital(p.clasificacion)) return "servicios";
+
+  const nom = (p.nombre || "").toLowerCase();
+  const med = (p.medida || "").toUpperCase();
+
+  if (
+    med.includes("R1") ||
+    med.includes("R2") ||
+    nom.includes("llanta") ||
+    nom.includes("neumat")
+  ) {
+    return "llantas";
+  }
+  if (
+    nom.includes("aceite") ||
+    nom.includes("lubric") ||
+    med.includes("W-") ||
+    med.includes("SAE")
+  ) {
+    return "aceites";
+  }
+  if (
+    nom.includes("parche") ||
+    nom.includes("camara") ||
+    nom.includes("cámara") ||
+    nom.includes("mecha") ||
+    nom.includes("tarugo") ||
+    nom.includes("vulcaniz") ||
+    nom.includes("valvula") ||
+    nom.includes("válvula") ||
+    nom.includes("piton") ||
+    nom.includes("pitón") ||
+    nom.includes("cemento")
+  ) {
+    return "parches";
+  }
+  if (
+    nom.includes("refrigerante") ||
+    nom.includes("coolant") ||
+    nom.includes("freno") ||
+    nom.includes("aditivo") ||
+    nom.includes("inyector") ||
+    nom.includes("bateria") ||
+    nom.includes("batería") ||
+    nom.includes("desengrasante") ||
+    nom.includes("spray") ||
+    nom.includes("wd-40") ||
+    nom.includes("silicona")
+  ) {
+    return "aditivos";
+  }
+  if (
+    nom.includes("filtro") ||
+    nom.includes("plumilla") ||
+    nom.includes("tuerca") ||
+    nom.includes("perno") ||
+    nom.includes("tapa") ||
+    nom.includes("repuesto")
+  ) {
+    return "accesorios";
+  }
+
+  return "otro";
+}
+
+/**
+ * Formatea la tarjeta de producto para mostrar Marca arriba y Medida abajo
+ * de forma limpia, tal como lo solicitó el usuario, evitando redundancias.
+ */
+export function formatProductCardTitles(p: Producto) {
+  const marca = p.marca?.trim();
+  const medida = p.medida?.trim();
+  const nombre = p.nombre.trim();
+
+  if (marca && medida) {
+    const cleanedNombre = nombre
+      .replace(new RegExp("^Llanta\s*", "i"), "")
+      .replace(new RegExp("^Aceite\s*", "i"), "")
+      .replace(new RegExp(medida, "i"), "")
+      .replace(new RegExp(marca, "i"), "")
+      .replace(/[()·-]/g, "")
+      .trim();
+
+    return {
+      titulo: marca,
+      subtitulo: medida,
+      detalleExtra: cleanedNombre.length > 2 ? cleanedNombre : null,
+    };
+  }
+
+  if (marca) {
+    const cleanedNombre = nombre.replace(new RegExp(marca, "i"), "").trim();
+    return {
+      titulo: marca,
+      subtitulo: cleanedNombre && cleanedNombre !== nombre ? cleanedNombre : null,
+      detalleExtra: null,
+    };
+  }
+
+  if (medida) {
+    return {
+      titulo: nombre,
+      subtitulo: medida,
+      detalleExtra: null,
+    };
+  }
+
+  return {
+    titulo: nombre,
+    subtitulo: esCapital(p.clasificacion) ? null : "Mano de obra / Servicio",
+    detalleExtra: null,
+  };
+}
+
+
 export default function Stock() {
   const navigate = useNavigate();
   const { tipo, negocio, loading: cargandoNegocio } = useNegocioDelTipo();
@@ -55,6 +175,9 @@ export default function Stock() {
   const [tabPrincipal, setTabPrincipal] = useState<TabPrincipal>("productos");
   const [vistaStock, setVistaStock] = useState<VistaStock>("marca");
   const [busqueda, setBusqueda] = useState("");
+
+  // Filtro por Categoría en la cabecera (muy aparte de los tabs de tipo)
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
 
   // Estado del Modal de Creación Asistida
   const [modalNuevoAbierto, setModalNuevoAbierto] = useState(false);
@@ -225,32 +348,135 @@ export default function Stock() {
     return match ? match.medidas : [];
   }, [todasMedidasPorAro, aroActivo]);
 
-  // Filtrado de "Todos los Ítems" con buscador en vivo
-  const todosFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return productosActivos;
-    const q = busqueda.toLowerCase().trim();
-    return productosActivos.filter(
-      (p) =>
-        p.nombre.toLowerCase().includes(q) ||
-        (p.marca && p.marca.toLowerCase().includes(q)) ||
-        (p.medida && p.medida.toLowerCase().includes(q)),
-    );
-  }, [productosActivos, busqueda]);
+  // Lista de píldoras de filtro por categoría según el tab activo
+  const filtrosCategoriaDisponibles = useMemo(() => {
+    const universo =
+      tabPrincipal === "productos"
+        ? inventarioProductos
+        : tabPrincipal === "servicios"
+          ? servicios
+          : productosActivos;
 
-  // Agrupamiento por marca para productos
+    const conteos: Record<string, number> = {};
+    for (const p of universo) {
+      const cat = obtenerCategoriaProducto(p);
+      conteos[cat] = (conteos[cat] || 0) + 1;
+    }
+
+    const opciones: { id: string; label: string; conteo: number }[] = [
+      { id: "todas", label: "Todas las categorías", conteo: universo.length },
+    ];
+
+    if (tabPrincipal !== "servicios") {
+      opciones.push({
+        id: "llantas",
+        label: "🚗 Llantas",
+        conteo: conteos["llantas"] || 0,
+      });
+      opciones.push({
+        id: "parches",
+        label: "🔧 Parches y Vulcanización",
+        conteo: conteos["parches"] || 0,
+      });
+      opciones.push({
+        id: "aceites",
+        label: "🛢️ Aceites y Lubricantes",
+        conteo: conteos["aceites"] || 0,
+      });
+      opciones.push({
+        id: "aditivos",
+        label: "🧪 Aditivos y Fluidos",
+        conteo: conteos["aditivos"] || 0,
+      });
+      opciones.push({
+        id: "accesorios",
+        label: "🔩 Accesorios y Repuestos",
+        conteo: conteos["accesorios"] || 0,
+      });
+    }
+
+    if (tabPrincipal === "servicios" || tabPrincipal === "todos") {
+      opciones.push({
+        id: "servicios",
+        label: "🛠️ Servicios y Mano de Obra",
+        conteo: conteos["servicios"] || 0,
+      });
+    }
+
+    if (conteos["otro"]) {
+      opciones.push({
+        id: "otro",
+        label: "📦 Otros",
+        conteo: conteos["otro"] || 0,
+      });
+    }
+
+    return opciones;
+  }, [tabPrincipal, inventarioProductos, servicios, productosActivos]);
+
+  // Productos físicos filtrados por categoría y buscador
+  const inventarioFiltrado = useMemo(() => {
+    let lista = inventarioProductos;
+    if (filtroCategoria !== "todas") {
+      lista = lista.filter((p) => obtenerCategoriaProducto(p) === filtroCategoria);
+    }
+    if (busqueda.trim()) {
+      const q = busqueda.toLowerCase().trim();
+      lista = lista.filter(
+        (p) =>
+          p.nombre.toLowerCase().includes(q) ||
+          (p.marca && p.marca.toLowerCase().includes(q)) ||
+          (p.medida && p.medida.toLowerCase().includes(q)),
+      );
+    }
+    return lista;
+  }, [inventarioProductos, filtroCategoria, busqueda]);
+
+  // Servicios filtrados por categoría y buscador
+  const serviciosFiltrados = useMemo(() => {
+    let lista = servicios;
+    if (filtroCategoria !== "todas" && filtroCategoria !== "servicios") {
+      return [];
+    }
+    if (busqueda.trim()) {
+      const q = busqueda.toLowerCase().trim();
+      lista = lista.filter((s) => s.nombre.toLowerCase().includes(q));
+    }
+    return lista;
+  }, [servicios, filtroCategoria, busqueda]);
+
+  // Todos los ítems filtrados por categoría y buscador
+  const todosFiltrados = useMemo(() => {
+    let lista = productosActivos;
+    if (filtroCategoria !== "todas") {
+      lista = lista.filter((p) => obtenerCategoriaProducto(p) === filtroCategoria);
+    }
+    if (busqueda.trim()) {
+      const q = busqueda.toLowerCase().trim();
+      lista = lista.filter(
+        (p) =>
+          p.nombre.toLowerCase().includes(q) ||
+          (p.marca && p.marca.toLowerCase().includes(q)) ||
+          (p.medida && p.medida.toLowerCase().includes(q)),
+      );
+    }
+    return lista;
+  }, [productosActivos, filtroCategoria, busqueda]);
+
+  // Agrupamiento por marca para productos físicos filtrados
   const porMarca = useMemo(() => {
     const grupos = new Map<string, Producto[]>();
-    for (const p of inventarioProductos) {
+    for (const p of inventarioFiltrado) {
       const clave = p.marca?.trim() || "Sin marca";
       grupos.set(clave, [...(grupos.get(clave) ?? []), p]);
     }
     return [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [inventarioProductos]);
+  }, [inventarioFiltrado]);
 
   // Agrupamiento general (por medida/especificación) para productos
   const general = useMemo(() => {
     const grupos = new Map<string, { cantidad: number; valor: number }>();
-    for (const p of inventarioProductos) {
+    for (const p of inventarioFiltrado) {
       const clave = p.medida?.trim() || "Sin medida";
       const actual = grupos.get(clave) ?? { cantidad: 0, valor: 0 };
       grupos.set(clave, {
@@ -261,7 +487,7 @@ export default function Stock() {
       });
     }
     return [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [inventarioProductos]);
+  }, [inventarioFiltrado]);
 
   // Cálculos de Margen y Ganancia en Vivo
   const gananciaNuevo = useMemo(() => {
@@ -687,7 +913,10 @@ export default function Stock() {
           <button
             type="button"
             className={`${styles.mainTab} ${tabPrincipal === "productos" ? styles.mainTabActive : ""}`}
-            onClick={() => setTabPrincipal("productos")}
+            onClick={() => {
+              setTabPrincipal("productos");
+              setFiltroCategoria("todas");
+            }}
           >
             <BoxIcon size={16} />
             <span>Productos en Stock</span>
@@ -696,7 +925,10 @@ export default function Stock() {
           <button
             type="button"
             className={`${styles.mainTab} ${tabPrincipal === "servicios" ? styles.mainTabActive : ""}`}
-            onClick={() => setTabPrincipal("servicios")}
+            onClick={() => {
+              setTabPrincipal("servicios");
+              setFiltroCategoria("todas");
+            }}
           >
             <WrenchIcon size={16} />
             <span>Servicios y Mano de Obra</span>
@@ -705,7 +937,10 @@ export default function Stock() {
           <button
             type="button"
             className={`${styles.mainTab} ${tabPrincipal === "todos" ? styles.mainTabActive : ""}`}
-            onClick={() => setTabPrincipal("todos")}
+            onClick={() => {
+              setTabPrincipal("todos");
+              setFiltroCategoria("todas");
+            }}
           >
             <span>Todos los Ítems</span>
             <span className={styles.tabBadge}>{conteoTotal}</span>
@@ -723,6 +958,32 @@ export default function Stock() {
           <span>+ Nuevo Producto / Servicio</span>
         </button>
       </header>
+
+      {/* ========================================================================= */}
+      {/* Barra de Filtros por Categoría (Separada de los tabs principales)          */}
+      {/* ========================================================================= */}
+      <div className={styles.categoryFilterContainer}>
+        <div
+          className={styles.categoryFilterRow}
+          role="tablist"
+          aria-label="Filtrar por categoría de producto"
+        >
+          {filtrosCategoriaDisponibles.map((cat) => {
+            const activa = filtroCategoria === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                className={`${styles.categoryFilterPill} ${activa ? styles.categoryFilterPillActive : ""}`}
+                onClick={() => setFiltroCategoria(cat.id)}
+              >
+                <span>{cat.label}</span>
+                <span className={styles.categoryFilterBadge}>{cat.conteo}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Barra de Búsqueda y Sub-vistas */}
       <div className={styles.subTabsRow}>
@@ -773,7 +1034,7 @@ export default function Stock() {
 
       {/* Contenido Principal según el Tab Seleccionado */}
       {tabPrincipal === "productos" ? (
-        inventarioProductos.length === 0 ? (
+        inventarioFiltrado.length === 0 ? (
           <EmptyState
             icon={<BoxIcon size={24} />}
             title="Todavía no hay productos físicos registrados"
@@ -797,15 +1058,20 @@ export default function Stock() {
                 </div>
                 <div className={styles.cardGrid}>
                   {prods.map((p) => {
+                    const { titulo, subtitulo, detalleExtra } = formatProductCardTitles(p);
                     const badge = getEstadoUsoBadge(p.estado_uso);
                     const bajoMinimo = p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo;
                     return (
                       <div key={p.id} className={styles.productCard}>
                         <div className={styles.cardTop}>
                           <div className={styles.titleArea}>
-                            <h3 className={styles.productName}>{p.nombre}</h3>
-                            {p.medida && (
-                              <span className={styles.medidaTag}>Medida: {p.medida}</span>
+                            {/* Visualización limpia solicitada: Marca arriba, Medida abajo */}
+                            <h3 className={styles.cardMarcaTitle}>{titulo}</h3>
+                            {subtitulo && (
+                              <span className={styles.cardMedidaSubtitle}>{subtitulo}</span>
+                            )}
+                            {detalleExtra && (
+                              <span className={styles.cardExtraNombre}>{detalleExtra}</span>
                             )}
                           </div>
                           <div className={styles.cardBadges}>
@@ -906,7 +1172,7 @@ export default function Stock() {
           </div>
         )
       ) : tabPrincipal === "servicios" ? (
-        servicios.length === 0 ? (
+        serviciosFiltrados.length === 0 ? (
           <EmptyState
             icon={<WrenchIcon size={24} />}
             title="Todavía no hay servicios registrados"
@@ -920,7 +1186,7 @@ export default function Stock() {
           />
         ) : (
           <div className={styles.cardGrid}>
-            {servicios.map((s) => (
+            {serviciosFiltrados.map((s) => (
               <div key={s.id} className={styles.serviceCard}>
                 <div className={styles.serviceHeader}>
                   <div className={styles.serviceIconWrap}>
@@ -978,24 +1244,20 @@ export default function Stock() {
           <div className={styles.cardGrid}>
             {todosFiltrados.map((item) => {
               const esProd = esCapital(item.clasificacion);
+              const { titulo, subtitulo, detalleExtra } = formatProductCardTitles(item);
               const badge = esProd ? getEstadoUsoBadge(item.estado_uso) : null;
               return (
                 <div key={item.id} className={styles.productCard}>
                   <div className={styles.cardTop}>
                     <div className={styles.titleArea}>
-                      <h3 className={styles.productName}>{item.nombre}</h3>
-                      <div className={styles.detailsRow}>
-                        {esProd ? (
-                          <>
-                            {item.marca && <span className={styles.tag}>{item.marca}</span>}
-                            {item.medida && (
-                              <span className={styles.medidaTag}>{item.medida}</span>
-                            )}
-                          </>
-                        ) : (
-                          <span className={styles.serviceTag}>Servicio</span>
-                        )}
-                      </div>
+                      {/* Visualización limpia solicitada: Marca arriba, Medida abajo */}
+                      <h3 className={styles.cardMarcaTitle}>{titulo}</h3>
+                      {subtitulo && (
+                        <span className={styles.cardMedidaSubtitle}>{subtitulo}</span>
+                      )}
+                      {detalleExtra && (
+                        <span className={styles.cardExtraNombre}>{detalleExtra}</span>
+                      )}
                     </div>
                     {badge && (
                       <span
