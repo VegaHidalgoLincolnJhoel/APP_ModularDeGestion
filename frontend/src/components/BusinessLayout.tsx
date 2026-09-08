@@ -1,15 +1,46 @@
+import { useState, useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { AppShell } from "./AppShell";
 import { EmptyState } from "./EmptyState";
 import { Button } from "./Button";
+import { TutorialModal } from "./TutorialModal";
 import { useNegocioDelTipo } from "../hooks/useNegocioDelTipo";
 import { navItemsFor } from "../data/navigation";
 import { useAuth } from "../hooks/useAuth";
+
+const TUTORIAL_STORAGE_KEY = "gestion:tutorial_visto";
 
 export default function BusinessLayout() {
   const location = useLocation();
   const { isAdmin } = useAuth();
   const { tipo, tipoValido, config, negocio, loading, error, crearDePrueba } = useNegocioDelTipo();
+  const [tutorialAbierto, setTutorialAbierto] = useState(false);
+
+  // Abrir tutorial automáticamente en el primer uso
+  useEffect(() => {
+    if (loading || !negocio) return;
+    try {
+      const yaVisto = localStorage.getItem(TUTORIAL_STORAGE_KEY);
+      if (!yaVisto) {
+        setTutorialAbierto(true);
+      }
+    } catch {
+      // Ignorar errores de localStorage
+    }
+  }, [loading, negocio]);
+
+  function cerrarTutorial() {
+    setTutorialAbierto(false);
+    try {
+      localStorage.setItem(TUTORIAL_STORAGE_KEY, "true");
+    } catch {
+      // Ignorar
+    }
+  }
+
+  function abrirTutorial() {
+    setTutorialAbierto(true);
+  }
 
   if (!tipoValido) {
     return <Navigate to="/llanteria" replace />;
@@ -92,15 +123,26 @@ export default function BusinessLayout() {
   }
 
   return (
-    <AppShell
-      logo={<config.logo size={20} />}
-      negocioNombre={negocio.nombre}
-      saludo={saludo}
-      navItems={navItems}
-      activeId={activeId}
-      negocioId={negocio.id}
-    >
-      <Outlet />
-    </AppShell>
+    <>
+      <AppShell
+        logo={<config.logo size={20} />}
+        negocioNombre={negocio.nombre}
+        saludo={saludo}
+        navItems={navItems}
+        activeId={activeId}
+        negocioId={negocio.id}
+        onAbrirTutorial={abrirTutorial}
+      >
+        <Outlet />
+      </AppShell>
+
+      {tutorialAbierto && (
+        <TutorialModal
+          negocioNombre={negocio.nombre}
+          negocioTipo={tipo}
+          onClose={cerrarTutorial}
+        />
+      )}
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { LogoutIcon, SyncIcon, UserIcon, WifiOffIcon } from "./icons/Icons";
+import { HelpCircleIcon, LogoutIcon, SyncIcon, UserIcon, WifiOffIcon } from "./icons/Icons";
 import type { IconProps } from "./icons/Icons";
 import { useAuth } from "../hooks/useAuth";
 import { useSync } from "../hooks/useSync";
@@ -21,6 +21,7 @@ export interface AppShellProps {
   navItems: NavItem[];
   activeId: string;
   negocioId?: number;
+  onAbrirTutorial?: () => void;
   children: ReactNode;
 }
 
@@ -104,6 +105,7 @@ export function AppShell({
   navItems,
   activeId,
   negocioId,
+  onAbrirTutorial,
   children,
 }: AppShellProps) {
   const { session, logout } = useAuth();
@@ -134,6 +136,18 @@ export function AppShell({
         </nav>
 
         <div className={styles.sidebarSpacer} />
+
+        {onAbrirTutorial && (
+          <button
+            type="button"
+            className={styles.sidebarTutorialBtn}
+            onClick={onAbrirTutorial}
+            title="Ver Guía interactiva del sistema"
+          >
+            <HelpCircleIcon size={16} />
+            <span>Guía interactiva</span>
+          </button>
+        )}
 
         <div className={styles.sidebarSync}>
           <SyncBadge
@@ -168,6 +182,18 @@ export function AppShell({
               onSync={syncNow}
               compact
             />
+            {onAbrirTutorial && (
+              <button
+                type="button"
+                className={styles.tutorialBtnMobile}
+                onClick={onAbrirTutorial}
+                title="Guía interactiva del sistema"
+                aria-label="Ver Guía del sistema"
+              >
+                <HelpCircleIcon size={15} />
+                <span>Guía</span>
+              </button>
+            )}
             <button
               type="button"
               className={styles.iconButton}
@@ -188,6 +214,17 @@ export function AppShell({
               pendingCount={pendingCount}
               onSync={syncNow}
             />
+            {onAbrirTutorial && (
+              <button
+                type="button"
+                className={styles.tutorialBtnDesktop}
+                onClick={onAbrirTutorial}
+                title="Ver Guía interactiva del sistema"
+              >
+                <HelpCircleIcon size={16} />
+                <span>Guía rápida</span>
+              </button>
+            )}
             <button
               type="button"
               className={styles.iconButton}
