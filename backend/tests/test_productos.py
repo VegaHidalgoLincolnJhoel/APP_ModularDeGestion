@@ -237,3 +237,70 @@ def test_delete_producto_cross_tenant_forbidden(client, seed_data):
         headers=headers_dueno1,
     )
     assert resp.status_code == 403
+
+
+def test_posible_duplicado_y_confirmar_nuevo(client, seed_data):
+    headers = {"Authorization": f"Bearer {seed_data['token_dueno1']}"}
+    negocio_id = seed_data["negocio1"].id
+
+    # 1. Crear producto base
+    resp = client.post(
+        f"/api/v1/negocios/{negocio_id}/productos",
+        json={"nombre": "Llanta 175/70 R13"},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+    # 2. Intentar crear duplicado con variación menor de espacios/mayúsculas
+    resp_dup = client.post(
+        f"/api/v1/negocios/{negocio_id}/productos",
+        json={"nombre": "llanta   175/70 r13"},
+        headers=headers,
+    )
+    assert resp_dup.status_code == 409
+    assert resp_dup.json()["detail"]["codigo"] == "posible_duplicado"
+
+    # 3. Con confirmar_nuevo=True debe crearlo exitosamente
+    resp_conf = client.post(
+        f"/api/v1/negocios/{negocio_id}/productos?confirmar_nuevo=true",
+        json={"nombre": "llanta   175/70 r13"},
+        headers=headers,
+    )
+    assert resp_conf.status_code == 201
+
+
+def test_medidas_distintas_no_se_consideran_duplicados(client, seed_data):
+    headers = {"Authorization": f"Bearer {seed_data['token_dueno1']}"}
+    negocio_id = seed_data["negocio1"].id
+
+    # Medidas de parches consecutivas (00 vs 01 vs RAC10)
+    resp1 = client.post(
+        f"/api/v1/negocios/{negocio_id}/productos",
+        json={"nombre": "Parchado de auto (frío) - chico 00", "medida": "00"},
+        headers=headers,
+    )
+    assert resp1.status_code == 201
+
+    # Con medida 01 no debe disparar 409
+    resp2 = client.post(
+        f"/api/v1/negocios/{negocio_id}/productos",
+        json={"nombre": "Parchado de auto (frío) - mediano 01", "medida": "01"},
+        headers=headers,
+    )
+    assert resp2.status_code == 201
+
+    # Códigos en nombre sin campo medida explícito también deben permitirse si el código final varía
+    resp3 = client.post(
+        f"/api/v1/negocios/{negocio_id}/productos",
+        json={"nombre": "Parche Radial RAC 10"},
+        headers=headers,
+    )
+    assert resp3.status_code == 201
+
+    resp4 = client.post(
+        f"/api/v1/negocios/{negocio_id}/productos",
+        json={"nombre": "Parche Radial RAC 12"},
+        headers=headers,
+    )
+    assert resp4.status_code == 201
+

@@ -50,7 +50,18 @@ def create_producto(
     """
     if not confirmar_nuevo:
         existentes = db.query(ProductoModel).filter(ProductoModel.negocio_id == negocio_id).all()
-        parecidos = [p for p in existentes if son_parecidos(p.nombre, payload.nombre)]
+        parecidos = [
+            p
+            for p in existentes
+            if son_parecidos(
+                p.nombre,
+                payload.nombre,
+                medida_a=p.medida,
+                medida_b=payload.medida,
+                marca_a=p.marca,
+                marca_b=payload.marca,
+            )
+        ]
         if parecidos:
             raise HTTPException(
                 status_code=409,

@@ -20,12 +20,12 @@ export const CATEGORIAS_DEFAULT: CategoriaPreset[] = [
     descripcion: "Neumáticos nuevos y usados por medida y marca",
   },
   {
-    id: "parches",
-    nombre: "Parches y Vulcanización",
-    icono: "🔧",
-    tipo: "producto",
-    clasificacion: "capital",
-    descripcion: "Parches fríos, radiales, mechas, cámaras y válvulas",
+    id: "parches_servicios",
+    nombre: "Parchados y Servicios",
+    icono: "🛠️",
+    tipo: "servicio",
+    clasificacion: "servicio",
+    descripcion: "Mano de obra (parchado, alineación) e insumos (cajas de parches, mechas)",
   },
   {
     id: "aceites",
@@ -50,14 +50,6 @@ export const CATEGORIAS_DEFAULT: CategoriaPreset[] = [
     tipo: "producto",
     clasificacion: "capital",
     descripcion: "Filtros, plumillas, tuercas de rueda y repuestos",
-  },
-  {
-    id: "servicios",
-    nombre: "Servicios y Mano de Obra",
-    icono: "🛠️",
-    tipo: "servicio",
-    clasificacion: "servicio",
-    descripcion: "Parchado, enllante, balanceo, alineamiento, mecánica",
   },
   {
     id: "otro",
@@ -205,6 +197,65 @@ export const PARCHES_PLANTILLAS_DEFAULT = [
   "Válvula Pitón TR414",
   "Válvula Pitón TR413",
   "Cemento Vulcanizante (Lata)",
+];
+
+export const PARCHES_MEDIDAS_DEFAULT = [
+  "00",
+  "01",
+  "02",
+  "03",
+  "RAC 10",
+  "RAC 12",
+  "RAC 14",
+  "RAC 20",
+  "VD-1",
+  "VD-2",
+  "Tarugo / Mecha",
+  "Lata 250ml",
+  "Lata 500ml",
+];
+
+export const PARCHES_MARCAS_DEFAULT = [
+  "Vipal",
+  "Rema TipTop",
+  "Maruni",
+  "Tech",
+  "Slime",
+];
+
+export const PARCHES_PRESENTACIONES_DEFAULT = [
+  "Caja x 100",
+  "Caja x 50",
+  "Caja x 20",
+  "Lata / Tubo",
+  "Unidad suelta",
+];
+
+export const PARCHADOS_SERVICIOS_PLANTILLAS_DEFAULT = [
+  "Parchado de auto (frío)",
+  "Parchado de auto (tarugo)",
+  "Parchado de camioneta / SUV",
+  "Parchado de moto / mototaxi",
+  "Vulcanizado en caliente",
+  "Enllante y desllante (por rueda)",
+  "Balanceo computarizado (por rueda)",
+  "Alineamiento computarizado",
+  "Cambio de aceite y filtro",
+  "Bajada y subida de rueda",
+  "Rotación de 4 ruedas",
+  "Calibración de aire con nitrógeno",
+];
+
+export const PARCHADOS_MEDIDAS_SERVICIOS_DEFAULT = [
+  "Chico 00",
+  "Mediano 01",
+  "Grande 02",
+  "RAC 10",
+  "RAC 12",
+  "RAC 14",
+  "VD-1",
+  "Tarugo / Mecha",
+  "Estándar",
 ];
 
 export const ADITIVOS_PLANTILLAS_DEFAULT = [

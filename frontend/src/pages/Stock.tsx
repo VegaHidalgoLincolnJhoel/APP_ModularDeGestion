@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
@@ -32,9 +32,13 @@ import {
   ACEITES_MARCAS_DEFAULT,
   ACEITES_PRESENTACIONES_DEFAULT,
   PARCHES_PLANTILLAS_DEFAULT,
+  PARCHES_MEDIDAS_DEFAULT,
+  PARCHES_MARCAS_DEFAULT,
+  PARCHES_PRESENTACIONES_DEFAULT,
+  PARCHADOS_SERVICIOS_PLANTILLAS_DEFAULT,
+  PARCHADOS_MEDIDAS_SERVICIOS_DEFAULT,
   ADITIVOS_PLANTILLAS_DEFAULT,
   ACCESORIOS_PLANTILLAS_DEFAULT,
-  SERVICIOS_PLANTILLAS_DEFAULT,
   getCustomCatalog,
   addCustomMarca,
   removeCustomMarca,
@@ -52,8 +56,6 @@ type VistaStock = "marca" | "general";
  * medida y clasificación para los filtros dinámicos.
  */
 export function obtenerCategoriaProducto(p: Producto): string {
-  if (!esCapital(p.clasificacion)) return "servicios";
-
   const nom = (p.nombre || "").toLowerCase();
   const med = (p.medida || "").toUpperCase();
 
@@ -74,7 +76,9 @@ export function obtenerCategoriaProducto(p: Producto): string {
     return "aceites";
   }
   if (
+    !esCapital(p.clasificacion) ||
     nom.includes("parche") ||
+    nom.includes("parchado") ||
     nom.includes("camara") ||
     nom.includes("cámara") ||
     nom.includes("mecha") ||
@@ -84,9 +88,12 @@ export function obtenerCategoriaProducto(p: Producto): string {
     nom.includes("válvula") ||
     nom.includes("piton") ||
     nom.includes("pitón") ||
-    nom.includes("cemento")
+    nom.includes("cemento") ||
+    nom.includes("enllante") ||
+    nom.includes("balanceo") ||
+    nom.includes("alineamiento")
   ) {
-    return "parches";
+    return "parches_servicios";
   }
   if (
     nom.includes("refrigerante") ||
@@ -207,6 +214,18 @@ export default function Stock() {
   const [nuevaMedidaTexto, setNuevaMedidaTexto] = useState("");
   const [aroParaNuevaMedida, setAroParaNuevaMedida] = useState("Aro 15");
 
+  // Estados específicos para el módulo unificado de Parchados y Servicios
+  const [subTipoParchado, setSubTipoParchado] = useState<"servicio" | "insumo">("servicio");
+  const [parcheServicioNombre, setParcheServicioNombre] = useState("Parchado de auto (frío)");
+  const [parcheServicioMedida, setParcheServicioMedida] = useState("Chico 00");
+
+  const [parcheInsumoNombre, setParcheInsumoNombre] = useState("Parche Frío Redondo");
+  const [parcheInsumoMarca, setParcheInsumoMarca] = useState("Vipal");
+  const [parcheInsumoMedida, setParcheInsumoMedida] = useState("00");
+  const [parcheInsumoPresentacion, setParcheInsumoPresentacion] = useState("Caja x 100");
+
+  const duplicateBannerRef = useRef<HTMLDivElement>(null);
+
   // Versión local de catálogo personalizado para forzar re-render
   const [catalogVersion, setCatalogVersion] = useState(0);
 
@@ -215,6 +234,12 @@ export default function Stock() {
   const [candidatosDuplicados, setCandidatosDuplicados] = useState<
     ProductoCandidatoDuplicado[] | null
   >(null);
+
+  useEffect(() => {
+    if (candidatosDuplicados && candidatosDuplicados.length > 0) {
+      duplicateBannerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [candidatosDuplicados]);
 
   const [formNuevo, setFormNuevo] = useState({
     nombre: "",
@@ -581,24 +606,22 @@ export default function Stock() {
         stock_actual: "4",
         stock_minimo: "2",
       }));
-    } else if (cat.id === "servicios") {
+    } else if (
+      cat.id === "parches_servicios" ||
+      cat.id === "parches" ||
+      cat.id === "servicios"
+    ) {
+      setSubTipoParchado("servicio");
+      setTipoItemNuevo("servicio");
       setFormNuevo((prev) => ({
         ...prev,
-        nombre: "Parchado de auto (frío)",
+        nombre: `${parcheServicioNombre} - ${parcheServicioMedida}`,
         marca: "",
-        medida: "",
+        medida: parcheServicioMedida,
+        precio_lista: "7.00",
         precio_compra: "0.00",
         stock_actual: "0",
         stock_minimo: "0",
-      }));
-    } else if (cat.id === "parches") {
-      setFormNuevo((prev) => ({
-        ...prev,
-        nombre: "Parche Frío Redondo",
-        marca: "",
-        medida: "",
-        stock_actual: "10",
-        stock_minimo: "5",
       }));
     } else if (cat.id === "aditivos") {
       setFormNuevo((prev) => ({
@@ -626,6 +649,90 @@ export default function Stock() {
         medida: "",
       }));
     }
+  };
+
+  const cambiarSubTipoParchado = (sub: "servicio" | "insumo") => {
+    setSubTipoParchado(sub);
+    setErrorNuevo(null);
+    setCandidatosDuplicados(null);
+    if (sub === "servicio") {
+      setTipoItemNuevo("servicio");
+      setFormNuevo((prev) => ({
+        ...prev,
+        nombre: `${parcheServicioNombre} - ${parcheServicioMedida}`,
+        marca: "",
+        medida: parcheServicioMedida,
+        precio_lista: prev.precio_lista || "7.00",
+        precio_compra: "0.00",
+        stock_actual: "0",
+        stock_minimo: "0",
+      }));
+    } else {
+      setTipoItemNuevo("producto");
+      setFormNuevo((prev) => ({
+        ...prev,
+        nombre: `${parcheInsumoNombre} ${parcheInsumoMarca} ${parcheInsumoMedida} (${parcheInsumoPresentacion})`,
+        marca: parcheInsumoMarca,
+        medida: parcheInsumoMedida,
+        estado_uso: "nuevo",
+        precio_lista: prev.precio_lista || "10.00",
+        precio_compra: prev.precio_compra || "50.00",
+        stock_actual: "2",
+        stock_minimo: "1",
+      }));
+    }
+  };
+
+  const seleccionarServicioParchado = (srv: string) => {
+    setParcheServicioNombre(srv);
+    setFormNuevo((prev) => ({
+      ...prev,
+      nombre: `${srv} - ${parcheServicioMedida}`,
+      medida: parcheServicioMedida,
+    }));
+  };
+
+  const seleccionarMedidaServicioParchado = (med: string) => {
+    setParcheServicioMedida(med);
+    setFormNuevo((prev) => ({
+      ...prev,
+      nombre: `${parcheServicioNombre} - ${med}`,
+      medida: med,
+    }));
+  };
+
+  const seleccionarInsumoParchado = (nom: string) => {
+    setParcheInsumoNombre(nom);
+    setFormNuevo((prev) => ({
+      ...prev,
+      nombre: `${nom} ${parcheInsumoMarca} ${parcheInsumoMedida} (${parcheInsumoPresentacion})`,
+    }));
+  };
+
+  const seleccionarMarcaInsumoParchado = (marca: string) => {
+    setParcheInsumoMarca(marca);
+    setFormNuevo((prev) => ({
+      ...prev,
+      marca,
+      nombre: `${parcheInsumoNombre} ${marca} ${parcheInsumoMedida} (${parcheInsumoPresentacion})`,
+    }));
+  };
+
+  const seleccionarMedidaInsumoParchado = (medida: string) => {
+    setParcheInsumoMedida(medida);
+    setFormNuevo((prev) => ({
+      ...prev,
+      medida,
+      nombre: `${parcheInsumoNombre} ${parcheInsumoMarca} ${medida} (${parcheInsumoPresentacion})`,
+    }));
+  };
+
+  const seleccionarPresentacionInsumoParchado = (pres: string) => {
+    setParcheInsumoPresentacion(pres);
+    setFormNuevo((prev) => ({
+      ...prev,
+      nombre: `${parcheInsumoNombre} ${parcheInsumoMarca} ${parcheInsumoMedida} (${pres})`,
+    }));
   };
 
   const seleccionarMarcaLlanta = (m: string) => {
@@ -1603,54 +1710,6 @@ export default function Stock() {
                 </div>
               )}
 
-              {/* Manejo de Posible Duplicado */}
-              {candidatosDuplicados && candidatosDuplicados.length > 0 && (
-                <div className={styles.duplicateBanner} role="alert">
-                  <div className={styles.duplicateHeader}>
-                    <AlertTriangleIcon size={18} />
-                    <span>Posible ítem duplicado detectado</span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: "13px", color: "#e2e8f0" }}>
-                    Encontramos productos parecidos en tu inventario:
-                  </p>
-                  <div className={styles.candidatosList}>
-                    {candidatosDuplicados.map((c) => (
-                      <div key={c.id} className={styles.candidatoItem}>
-                        <strong>• {c.nombre}</strong>
-                        <span>
-                          {[c.marca, c.medida].filter(Boolean).join(" · ") || "Sin detalles"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className={styles.duplicateActions}>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setModalNuevoAbierto(false)}
-                    >
-                      Cancelar y revisar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      disabled={guardandoNuevo}
-                      onClick={() => submitNuevoItem(undefined, true)}
-                    >
-                      {guardandoNuevo ? "Creando…" : "Confirmar: Es otro ítem"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {errorNuevo && !candidatosDuplicados && (
-                <div className={styles.errorBox} role="alert">
-                  <p style={{ margin: 0 }}>{errorNuevo}</p>
-                </div>
-              )}
-
               {/* ============================================================= */}
               {/* CASCADA 1: LLANTAS                                            */}
               {/* ============================================================= */}
@@ -1927,25 +1986,139 @@ export default function Stock() {
               )}
 
               {/* ============================================================= */}
-              {/* CASCADA 3: PARCHES Y VULCANIZACIÓN                            */}
+              {/* CASCADA 3: PARCHADOS Y SERVICIOS (UNIFICADO)                  */}
               {/* ============================================================= */}
-              {categoriaActivaId === "parches" && (
-                <div className={styles.chipsSection}>
-                  <span className={styles.chipsLabel}>Plantillas frecuentes de vulcanización:</span>
-                  <div className={styles.chipsRow}>
-                    {PARCHES_PLANTILLAS_DEFAULT.map((plantilla) => (
-                      <button
-                        key={plantilla}
-                        type="button"
-                        className={`${styles.chip} ${formNuevo.nombre === plantilla ? styles.chipActive : ""}`}
-                        onClick={() =>
-                          setFormNuevo((prev) => ({ ...prev, nombre: plantilla }))
-                        }
-                      >
-                        {plantilla}
-                      </button>
-                    ))}
+              {(categoriaActivaId === "parches_servicios" ||
+                categoriaActivaId === "parches" ||
+                categoriaActivaId === "servicios") && (
+                <div className={styles.chipsSection} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {/* Selector de Sub-tipo: Servicio al Cliente vs Insumo Físico */}
+                  <div className={styles.typeSelector}>
+                    <button
+                      type="button"
+                      className={`${styles.typeBtn} ${subTipoParchado === "servicio" ? styles.typeBtnActive : ""}`}
+                      onClick={() => cambiarSubTipoParchado("servicio")}
+                    >
+                      <WrenchIcon size={15} />
+                      <span>🔧 Servicio al Cliente (Mano de Obra)</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.typeBtn} ${subTipoParchado === "insumo" ? styles.typeBtnActive : ""}`}
+                      onClick={() => cambiarSubTipoParchado("insumo")}
+                    >
+                      <BoxIcon size={15} />
+                      <span>📦 Insumo Físico (Cajas / Materiales)</span>
+                    </button>
                   </div>
+
+                  {subTipoParchado === "servicio" ? (
+                    <>
+                      {/* Servicios frecuentes */}
+                      <div>
+                        <span className={styles.chipsLabel}>1. Tipo de Servicio / Trabajo:</span>
+                        <div className={styles.chipsRow} style={{ marginTop: "6px" }}>
+                          {PARCHADOS_SERVICIOS_PLANTILLAS_DEFAULT.map((plantilla) => (
+                            <button
+                              key={plantilla}
+                              type="button"
+                              className={`${styles.chip} ${parcheServicioNombre === plantilla ? styles.chipActive : ""}`}
+                              onClick={() => seleccionarServicioParchado(plantilla)}
+                            >
+                              {plantilla}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Medida / Tamaño del Servicio */}
+                      <div>
+                        <span className={styles.chipsLabel}>2. Medida o Especificación del Parche:</span>
+                        <div className={styles.chipsRow} style={{ marginTop: "6px" }}>
+                          {PARCHADOS_MEDIDAS_SERVICIOS_DEFAULT.map((med) => (
+                            <button
+                              key={med}
+                              type="button"
+                              className={`${styles.chip} ${parcheServicioMedida === med ? styles.chipActive : ""}`}
+                              onClick={() => seleccionarMedidaServicioParchado(med)}
+                            >
+                              {med}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Tipo de Insumo Físico */}
+                      <div>
+                        <span className={styles.chipsLabel}>1. Material / Insumo:</span>
+                        <div className={styles.chipsRow} style={{ marginTop: "6px" }}>
+                          {PARCHES_PLANTILLAS_DEFAULT.map((insumo) => (
+                            <button
+                              key={insumo}
+                              type="button"
+                              className={`${styles.chip} ${parcheInsumoNombre === insumo ? styles.chipActive : ""}`}
+                              onClick={() => seleccionarInsumoParchado(insumo)}
+                            >
+                              {insumo}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Marca del Insumo */}
+                      <div>
+                        <span className={styles.chipsLabel}>2. Marca del Insumo:</span>
+                        <div className={styles.chipsRow} style={{ marginTop: "6px" }}>
+                          {PARCHES_MARCAS_DEFAULT.map((marca) => (
+                            <button
+                              key={marca}
+                              type="button"
+                              className={`${styles.chip} ${parcheInsumoMarca === marca ? styles.chipActive : ""}`}
+                              onClick={() => seleccionarMarcaInsumoParchado(marca)}
+                            >
+                              {marca}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Medida / Código del Insumo */}
+                      <div>
+                        <span className={styles.chipsLabel}>3. Medida / Código técnico:</span>
+                        <div className={styles.chipsRow} style={{ marginTop: "6px" }}>
+                          {PARCHES_MEDIDAS_DEFAULT.map((medida) => (
+                            <button
+                              key={medida}
+                              type="button"
+                              className={`${styles.chip} ${parcheInsumoMedida === medida ? styles.chipActive : ""}`}
+                              onClick={() => seleccionarMedidaInsumoParchado(medida)}
+                            >
+                              {medida}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Presentación del Insumo */}
+                      <div>
+                        <span className={styles.chipsLabel}>4. Presentación de Compra:</span>
+                        <div className={styles.chipsRow} style={{ marginTop: "6px" }}>
+                          {PARCHES_PRESENTACIONES_DEFAULT.map((pres) => (
+                            <button
+                              key={pres}
+                              type="button"
+                              className={`${styles.chip} ${parcheInsumoPresentacion === pres ? styles.chipActive : ""}`}
+                              onClick={() => seleccionarPresentacionInsumoParchado(pres)}
+                            >
+                              {pres}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -1980,29 +2153,6 @@ export default function Stock() {
                   <span className={styles.chipsLabel}>Accesorios frecuentes:</span>
                   <div className={styles.chipsRow}>
                     {ACCESORIOS_PLANTILLAS_DEFAULT.map((plantilla) => (
-                      <button
-                        key={plantilla}
-                        type="button"
-                        className={`${styles.chip} ${formNuevo.nombre === plantilla ? styles.chipActive : ""}`}
-                        onClick={() =>
-                          setFormNuevo((prev) => ({ ...prev, nombre: plantilla }))
-                        }
-                      >
-                        {plantilla}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ============================================================= */}
-              {/* CASCADA 6: SERVICIOS Y MANO DE OBRA                           */}
-              {/* ============================================================= */}
-              {categoriaActivaId === "servicios" && (
-                <div className={styles.chipsSection}>
-                  <span className={styles.chipsLabel}>Servicios de taller frecuentes:</span>
-                  <div className={styles.chipsRow}>
-                    {SERVICIOS_PLANTILLAS_DEFAULT.map((plantilla) => (
                       <button
                         key={plantilla}
                         type="button"
@@ -2111,6 +2261,54 @@ export default function Stock() {
                       }
                     />
                   </label>
+                </div>
+              )}
+
+              {/* Manejo de Posible Duplicado (Directo encima del botón Guardar) */}
+              {candidatosDuplicados && candidatosDuplicados.length > 0 && (
+                <div ref={duplicateBannerRef} className={styles.duplicateBanner} role="alert">
+                  <div className={styles.duplicateHeader}>
+                    <AlertTriangleIcon size={18} />
+                    <span>⚠️ Posible ítem duplicado detectado</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: "13px", color: "#e2e8f0" }}>
+                    Encontramos productos o servicios con nombres similares en tu inventario:
+                  </p>
+                  <div className={styles.candidatosList}>
+                    {candidatosDuplicados.map((c) => (
+                      <div key={c.id} className={styles.candidatoItem}>
+                        <strong>• {c.nombre}</strong>
+                        <span>
+                          {[c.marca, c.medida].filter(Boolean).join(" · ") || "Sin detalles"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={styles.duplicateActions}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCandidatosDuplicados(null)}
+                    >
+                      Revisar datos
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      disabled={guardandoNuevo}
+                      onClick={() => submitNuevoItem(undefined, true)}
+                    >
+                      {guardandoNuevo ? "Guardando…" : "Confirmar: Es otro ítem"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {errorNuevo && !candidatosDuplicados && (
+                <div className={styles.errorBox} role="alert">
+                  <p style={{ margin: 0 }}>{errorNuevo}</p>
                 </div>
               )}
 
