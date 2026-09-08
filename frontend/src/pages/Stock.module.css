@@ -582,12 +582,67 @@
   color: #2dd4bf;
 }
 
-/* General View Table / List */
+/* General View Accordion (Agrupado por medida) */
 .generalList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-width: 680px;
+  gap: 10px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.generalToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+  padding: 0 4px;
+}
+
+.generalHint {
+  font-size: 12px;
+  color: var(--ink-faint);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.generalToggleAllBtn {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.12));
+  color: var(--ink-soft, #475569);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.generalToggleAllBtn:hover {
+  background: rgba(13, 148, 136, 0.08);
+  color: #0d9488;
+  border-color: #0d9488;
+}
+
+.generalItem {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.1));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.generalItem:hover {
+  border-color: rgba(13, 148, 136, 0.35);
+}
+
+.generalItemExpanded {
+  border-color: #0d9488;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.12);
 }
 
 .generalRow {
@@ -595,29 +650,137 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px 16px;
+  background: transparent;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.generalRow:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.generalRowExpanded {
+  background: rgba(13, 148, 136, 0.03);
+  border-bottom: 1px solid var(--line);
+}
+
+.generalHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.generalChevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  transition: transform 0.2s ease, color 0.18s ease;
+  flex-shrink: 0;
+}
+
+.generalChevronOpen {
+  transform: rotate(180deg);
+  color: #0d9488;
 }
 
 .generalMedida {
-  font-weight: 700;
-  font-size: 14px;
+  font-family: var(--font-display, "Sora", sans-serif);
+  font-weight: 800;
+  font-size: 15.5px;
   color: var(--ink);
-  flex: 1;
+  letter-spacing: -0.01em;
+}
+
+.generalBrandsBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(13, 148, 136, 0.1);
+  color: #0d9488;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+  white-space: nowrap;
+}
+
+.generalHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
 }
 
 .generalCantidad {
   font-size: 13px;
+  font-weight: 500;
   color: var(--ink-soft);
 }
 
 .generalValor {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 14px;
+  font-family: var(--font-display, "Sora", sans-serif);
+  font-weight: 800;
+  font-size: 14.5px;
   color: var(--ink);
+}
+
+.generalDropdownContent {
+  padding: 16px;
+  background: var(--paper, #faf9f7);
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.generalCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .generalCardsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .generalCardsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.generalProductCard {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.1));
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.generalProductCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(13, 148, 136, 0.35);
 }
 
 /* Modals (Glassmorphic) */

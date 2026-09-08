@@ -103,6 +103,8 @@ export const CheckIcon = (p: IconProps) => svg(p, <path d="M4 12l5 5L20 6" />, 3
 
 export const ChevronLeftIcon = (p: IconProps) => svg(p, <path d="M15 5l-7 7 7 7" />, 2);
 
+export const ChevronDownIcon = (p: IconProps) => svg(p, <path d="M6 9l6 6 6-6" />, 2);
+
 export const CashIcon = (p: IconProps) =>
   svg(
     p,

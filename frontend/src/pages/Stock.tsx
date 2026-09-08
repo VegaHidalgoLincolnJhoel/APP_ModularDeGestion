@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
@@ -16,6 +16,7 @@ import { esCapital, getEstadoUsoBadge } from "../lib/contabilidad";
 import {
   AlertTriangleIcon,
   BoxIcon,
+  ChevronDownIcon,
   CloseIcon,
   EditIcon,
   PlusIcon,
@@ -184,6 +185,7 @@ export default function Stock() {
   const [tabPrincipal, setTabPrincipal] = useState<TabPrincipal>("productos");
   const [vistaStock, setVistaStock] = useState<VistaStock>("marca");
   const [busqueda, setBusqueda] = useState("");
+  const [medidasExpandidas, setMedidasExpandidas] = useState<Set<string>>(new Set());
 
   // Filtro por Categoría en la cabecera (muy aparte de los tabs de tipo)
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
@@ -482,21 +484,54 @@ export default function Stock() {
     return [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [inventarioFiltrado]);
 
-  // Agrupamiento general (por medida/especificación) para productos
+  // Agrupamiento general (por medida/especificación) para productos con sus items
   const general = useMemo(() => {
-    const grupos = new Map<string, { cantidad: number; valor: number }>();
+    const grupos = new Map<
+      string,
+      { cantidad: number; valor: number; productos: Producto[] }
+    >();
     for (const p of inventarioFiltrado) {
       const clave = p.medida?.trim() || "Sin medida";
-      const actual = grupos.get(clave) ?? { cantidad: 0, valor: 0 };
+      const actual = grupos.get(clave) ?? { cantidad: 0, valor: 0, productos: [] };
       grupos.set(clave, {
         cantidad: actual.cantidad + (p.stock_actual ?? 0),
         valor:
           actual.valor +
           (p.stock_actual ?? 0) * (parseFloat(p.precio_lista) || 0),
+        productos: [...actual.productos, p],
       });
     }
     return [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [inventarioFiltrado]);
+
+  // Expandir o colapsar una medida individual
+  const toggleMedidaExpandida = (medida: string) => {
+    setMedidasExpandidas((prev) => {
+      const next = new Set(prev);
+      if (next.has(medida)) {
+        next.delete(medida);
+      } else {
+        next.add(medida);
+      }
+      return next;
+    });
+  };
+
+  // Expandir todas o colapsar todas
+  const toggleTodasMedidas = () => {
+    if (medidasExpandidas.size >= general.length) {
+      setMedidasExpandidas(new Set());
+    } else {
+      setMedidasExpandidas(new Set(general.map(([m]) => m)));
+    }
+  };
+
+  // Si el usuario busca algo específico, auto-desplegamos las medidas coincidentes
+  useEffect(() => {
+    if (busqueda.trim() && general.length > 0) {
+      setMedidasExpandidas(new Set(general.map(([m]) => m)));
+    }
+  }, [busqueda, general]);
 
   // Cálculos de Margen y Ganancia en Vivo
   const gananciaNuevo = useMemo(() => {
@@ -1167,17 +1202,201 @@ export default function Stock() {
           </div>
         ) : (
           <div className={styles.generalList}>
-            {general.map(([medida, totales]) => (
-              <div key={medida} className={styles.generalRow}>
-                <span className={styles.generalMedida}>{medida}</span>
-                <span className={styles.generalCantidad}>
-                  {totales.cantidad} {totales.cantidad === 1 ? "unidad" : "unidades"}
-                </span>
-                <span className={styles.generalValor}>
-                  {formatMoney(totales.valor.toFixed(2))}
-                </span>
-              </div>
-            ))}
+            <div className={styles.generalToolbar}>
+              <span className={styles.generalHint}>
+                💡 Haz clic en cualquier medida para ver y gestionar sus marcas
+              </span>
+              {general.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.generalToggleAllBtn}
+                  onClick={toggleTodasMedidas}
+                >
+                  {medidasExpandidas.size >= general.length
+                    ? "Colapsar todas"
+                    : "Desplegar todas"}
+                </button>
+              )}
+            </div>
+
+            {general.map(([medida, totales]) => {
+              const estaExpandido = medidasExpandidas.has(medida);
+              const marcasUnicas = new Set(
+                totales.productos.map((p) => (p.marca || p.nombre).trim())
+              );
+              const marcasCount = marcasUnicas.size;
+
+              return (
+                <div
+                  key={medida}
+                  className={`${styles.generalItem} ${
+                    estaExpandido ? styles.generalItemExpanded : ""
+                  }`}
+                >
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={estaExpandido}
+                    className={`${styles.generalRow} ${
+                      estaExpandido ? styles.generalRowExpanded : ""
+                    }`}
+                    onClick={() => toggleMedidaExpandida(medida)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleMedidaExpandida(medida);
+                      }
+                    }}
+                  >
+                    <div className={styles.generalHeaderLeft}>
+                      <span
+                        className={`${styles.generalChevron} ${
+                          estaExpandido ? styles.generalChevronOpen : ""
+                        }`}
+                      >
+                        <ChevronDownIcon size={18} />
+                      </span>
+                      <span className={styles.generalMedida}>{medida}</span>
+                      <span className={styles.generalBrandsBadge}>
+                        {marcasCount} {marcasCount === 1 ? "marca" : "marcas"}
+                      </span>
+                    </div>
+
+                    <div className={styles.generalHeaderRight}>
+                      <span className={styles.generalCantidad}>
+                        {totales.cantidad} {totales.cantidad === 1 ? "unidad" : "unidades"}
+                      </span>
+                      <span className={styles.generalValor}>
+                        {formatMoney(totales.valor.toFixed(2))}
+                      </span>
+                    </div>
+                  </div>
+
+                  {estaExpandido && (
+                    <div className={styles.generalDropdownContent}>
+                      <div className={styles.generalCardsGrid}>
+                        {totales.productos.map((p) => {
+                          const { titulo, detalleExtra } = formatProductCardTitles(p);
+                          const badge = getEstadoUsoBadge(p.estado_uso);
+                          const bajoMinimo =
+                            p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo;
+                          return (
+                            <div key={p.id} className={styles.generalProductCard}>
+                              <div className={styles.cardTop}>
+                                <div className={styles.titleArea}>
+                                  <h4 className={styles.cardMarcaTitle}>
+                                    {p.marca || titulo}
+                                  </h4>
+                                  {detalleExtra && (
+                                    <span className={styles.cardExtraNombre}>
+                                      {detalleExtra}
+                                    </span>
+                                  )}
+                                  {p.nombre &&
+                                    p.nombre !== p.marca &&
+                                    !detalleExtra && (
+                                      <span className={styles.cardExtraNombre}>
+                                        {p.nombre}
+                                      </span>
+                                    )}
+                                </div>
+                                {badge && (
+                                  <span
+                                    className={
+                                      badge.tipo === "nuevo"
+                                        ? styles.badgeNuevo
+                                        : styles.badgeUsado
+                                    }
+                                  >
+                                    {badge.label}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className={styles.cardInfoRow}>
+                                <span
+                                  className={
+                                    bajoMinimo ? styles.cantidadBaja : styles.cantidad
+                                  }
+                                >
+                                  {bajoMinimo && <AlertTriangleIcon size={14} />}
+                                  {p.stock_actual} en stock
+                                  {p.stock_minimo > 0 && ` (mín. ${p.stock_minimo})`}
+                                </span>
+                                <div className={styles.precioBlock}>
+                                  <span className={styles.precio}>
+                                    {formatMoney(p.precio_lista)}
+                                  </span>
+                                  {parseFloat(p.precio_compra) > 0 && (
+                                    <span className={styles.costo}>
+                                      Costo: {formatMoney(p.precio_compra)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className={styles.cardActions}>
+                                <button
+                                  type="button"
+                                  className={styles.actionButton}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/${tipo}/stock/ajustar/${p.id}`);
+                                  }}
+                                  title="Ajustar cantidad de stock"
+                                >
+                                  <WrenchIcon size={13} />
+                                  <span>Ajustar</span>
+                                </button>
+                                {negocio?.modulo_rus_activo && (
+                                  <button
+                                    type="button"
+                                    className={styles.actionButton}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/${tipo}/stock/comprar/${p.id}`);
+                                    }}
+                                    title="Registrar compra formal"
+                                  >
+                                    <PlusIcon size={13} />
+                                    <span>Comprar</span>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  className={styles.actionButton}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    abrirModalEditar(p);
+                                  }}
+                                  title="Editar producto"
+                                  aria-label={`Editar ${p.nombre}`}
+                                >
+                                  <EditIcon size={13} />
+                                  <span>Editar</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`${styles.actionIconBtn} ${styles.deleteBtn}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    abrirModalEliminar(p);
+                                  }}
+                                  title="Eliminar producto"
+                                  aria-label={`Eliminar ${p.nombre}`}
+                                >
+                                  <TrashIcon size={13} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )
       ) : tabPrincipal === "servicios" ? (
