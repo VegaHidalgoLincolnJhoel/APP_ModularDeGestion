@@ -116,6 +116,10 @@ export function obtenerCategoriaProducto(p: Producto): string {
   return "otro";
 }
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * Formatea la tarjeta de producto para mostrar Marca arriba y Medida abajo
  * de forma limpia, tal como lo solicitó el usuario, evitando redundancias.
@@ -127,22 +131,27 @@ export function formatProductCardTitles(p: Producto) {
 
   if (marca && medida) {
     const cleanedNombre = nombre
-      .replace(new RegExp("^Llanta\s*", "i"), "")
-      .replace(new RegExp("^Aceite\s*", "i"), "")
-      .replace(new RegExp(medida, "i"), "")
-      .replace(new RegExp(marca, "i"), "")
+      .replace(/^Llanta\s*/i, "")
+      .replace(/^Aceite\s*/i, "")
+      .replace(new RegExp(escapeRegex(medida), "i"), "")
+      .replace(new RegExp(escapeRegex(marca), "i"), "")
       .replace(/[()·-]/g, "")
       .trim();
+
+    const isRedundant =
+      cleanedNombre.length <= 2 ||
+      marca.toLowerCase().includes(cleanedNombre.toLowerCase()) ||
+      cleanedNombre.toLowerCase().includes(marca.toLowerCase());
 
     return {
       titulo: marca,
       subtitulo: medida,
-      detalleExtra: cleanedNombre.length > 2 ? cleanedNombre : null,
+      detalleExtra: isRedundant ? null : cleanedNombre,
     };
   }
 
   if (marca) {
-    const cleanedNombre = nombre.replace(new RegExp(marca, "i"), "").trim();
+    const cleanedNombre = nombre.replace(new RegExp(escapeRegex(marca), "i"), "").trim();
     return {
       titulo: marca,
       subtitulo: cleanedNombre && cleanedNombre !== nombre ? cleanedNombre : null,
@@ -1282,12 +1291,13 @@ export default function Stock() {
                   <div className={styles.cardActions}>
                     <button
                       type="button"
-                      className={styles.actionIconBtn}
+                      className={styles.actionButton}
                       onClick={() => abrirModalEditar(item)}
                       title="Editar ítem"
                       aria-label={`Editar ${item.nombre}`}
                     >
-                      <EditIcon size={14} />
+                      <EditIcon size={13} />
+                      <span>Editar</span>
                     </button>
                     <button
                       type="button"
