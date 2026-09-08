@@ -242,7 +242,12 @@ function CierreCajaContenido({
                       {m.tipo === "servicio" ? "Servicio" : "Producto"}
                     </span>
                   </td>
-                  <td>{m.descripcion ?? productosPorId.get(m.producto_id)?.nombre ?? "—"}</td>
+                  <td>
+                    {m.cantidad && m.cantidad > 1 && (
+                      <span className={styles.cantBadge}>{m.cantidad}x</span>
+                    )}
+                    <span>{m.descripcion ?? productosPorId.get(m.producto_id)?.nombre ?? "—"}</span>
+                  </td>
                   <td className={styles.muted}>{m.metodo_pago === "digital" ? "Digital" : "Efectivo"}</td>
                   <td className={styles.right}>{formatMoney(m.precio_final)}</td>
                   {!cerrada && (
@@ -284,6 +289,7 @@ function CierreCajaContenido({
 
             <div className={styles.deleteItemSummary}>
               <span className={styles.deleteItemName}>
+                {movimientoAAnular.cantidad && movimientoAAnular.cantidad > 1 ? `${movimientoAAnular.cantidad}x ` : ""}
                 {movimientoAAnular.descripcion ??
                   productosPorId.get(movimientoAAnular.producto_id)?.nombre ??
                   "Movimiento"}
@@ -294,7 +300,7 @@ function CierreCajaContenido({
             </div>
 
             <p className={styles.deleteWarningNote}>
-              ¿Anular esta venta? Se devolverá el stock al inventario y se eliminará del cierre de caja.
+              ¿Anular esta venta? {movimientoAAnular.cantidad && movimientoAAnular.cantidad > 1 ? `Se devolverán ${movimientoAAnular.cantidad} unidades de stock al inventario` : "Se devolverá el stock al inventario"} y se descontará del cierre de caja.
             </p>
 
             {errorAnular && (

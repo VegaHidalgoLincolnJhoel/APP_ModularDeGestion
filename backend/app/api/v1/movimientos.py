@@ -69,8 +69,9 @@ def delete_movimiento(
         raise HTTPException(status_code=404, detail="Movimiento no encontrado")
 
     producto = db.get(ProductoModel, movimiento.producto_id)
+    cant_a_restaurar = getattr(movimiento, "cantidad", 1) or 1
     if producto is not None and es_capital(producto.clasificacion):
-        producto.stock_actual = producto.stock_actual + 1
+        producto.stock_actual = producto.stock_actual + cant_a_restaurar
 
     db.delete(movimiento)
     db.commit()
@@ -99,13 +100,20 @@ def _crear_movimiento(
         if cliente_vehiculo is None or cliente_vehiculo.negocio_id != negocio_id:
             raise HTTPException(status_code=404, detail="Cliente/vehículo no encontrado")
 
+    cantidad = payload.cantidad if (payload.cantidad is not None and payload.cantidad > 0) else 1
+
     consume_stock = es_capital(producto.clasificacion)
     stock_resultante = producto.stock_actual
     if consume_stock:
         if producto.stock_actual <= 0:
             raise HTTPException(status_code=409, detail="No hay stock disponible para este producto")
+        if producto.stock_actual < cantidad:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Stock insuficiente. Stock actual: {producto.stock_actual}, cantidad solicitada: {cantidad}.",
+            )
 
-        stock_resultante = producto.stock_actual - 1
+        stock_resultante = producto.stock_actual - cantidad
         queda_bajo_minimo = stock_resultante < producto.stock_minimo
         if queda_bajo_minimo and not confirmar_bajo_minimo:
             raise HTTPException(
@@ -113,7 +121,7 @@ def _crear_movimiento(
                 detail={
                     "codigo": "stock_bajo_minimo",
                     "mensaje": (
-                        f"Esta venta deja el stock en {stock_resultante}, por debajo "
+                        f"Esta venta de {cantidad} unidad(es) deja el stock en {stock_resultante}, por debajo "
                         f"del mínimo configurado ({producto.stock_minimo}). Reintenta "
                         "con confirmar_bajo_minimo=true para continuar."
                     ),
@@ -123,16 +131,19 @@ def _crear_movimiento(
             )
 
     # El precio de lista es una foto del precio de catálogo al momento de la
-    # venta (aunque el producto cambie de precio después, el historial no se
-    # mueve). El precio final es lo realmente cobrado; si no lo mandan, se
-    # asume que se cobró el de lista.
-    precio_lista = payload.precio_lista if payload.precio_lista is not None else producto.precio_lista
+    # venta (multiplicado por la cantidad). El precio final es lo realmente cobrado;
+    # si no lo mandan, se asume que se cobró el de lista por la cantidad.
+    precio_lista = (
+        payload.precio_lista
+        if payload.precio_lista is not None
+        else (producto.precio_lista * cantidad)
+    )
     precio_final = payload.precio_final if payload.precio_final is not None else precio_lista
 
     if payload.monto_capital is not None:
         monto_capital = payload.monto_capital
     elif es_capital(producto.clasificacion):
-        monto_capital = producto.precio_compra
+        monto_capital = producto.precio_compra * cantidad
     else:
         monto_capital = 0.0
 
@@ -142,6 +153,7 @@ def _crear_movimiento(
         "producto_id": payload.producto_id,
         "cliente_vehiculo_id": payload.cliente_vehiculo_id,
         "tipo": payload.tipo,
+        "cantidad": cantidad,
         "descripcion": payload.descripcion,
         "precio_lista": precio_lista,
         "precio_final": precio_final,

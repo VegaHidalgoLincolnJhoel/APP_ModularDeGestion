@@ -9,6 +9,7 @@ class MovimientoBase(BaseModel):
     producto_id: int
     cliente_vehiculo_id: int | None = None
     tipo: str
+    cantidad: int = 1
     descripcion: str | None = None
     metodo_pago: str | None = None
 

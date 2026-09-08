@@ -435,6 +435,146 @@
   color: var(--danger);
 }
 
+/* --- SELECTOR DE CANTIDAD --- */
+.cantidadCard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cantidadHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stockDisponibleBadge {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--surface-soft, rgba(0, 0, 0, 0.05));
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
+.stepperContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.stepperBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.stepperBtn:hover:not(:disabled) {
+  background: var(--primary, #2563eb);
+  color: #fff;
+  border-color: var(--primary, #2563eb);
+  transform: scale(1.04);
+}
+
+.stepperBtn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.stepperBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.stepperInputWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+}
+
+.stepperInput {
+  width: 80px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.stepperUnitLabel {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quickCantPills {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--line);
+}
+
+.quickCantPill {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.quickCantPill:hover:not(:disabled) {
+  border-color: var(--primary, #2563eb);
+  color: var(--ink);
+}
+
+.quickCantPillActive {
+  background: var(--primary, #2563eb) !important;
+  color: #fff !important;
+  border-color: var(--primary, #2563eb) !important;
+}
+
+.quickCantPill:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.unitSubHint {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-faint);
+  margin-left: 6px;
+}
+
 /* --- TICKET DIGITAL / COMPROBANTE --- */
 .ticketContainer {
   display: flex;

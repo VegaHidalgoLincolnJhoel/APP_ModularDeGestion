@@ -32,7 +32,7 @@ import styles from "./MovimientoFlow.module.css";
 type Paso = "elegir" | "precio" | "confirmar";
 const PASOS: { id: Paso; label: string }[] = [
   { id: "elegir", label: "Elegir" },
-  { id: "precio", label: "Precio" },
+  { id: "precio", label: "Cantidad y precio" },
   { id: "confirmar", label: "Pago" },
 ];
 
@@ -47,6 +47,9 @@ export default function MovimientoFlow() {
   const [filtroEstadoUso, setFiltroEstadoUso] = useState<"todas" | "nuevo" | "usado">("todas");
   const [medidaElegida, setMedidaElegida] = useState<string | null>(null);
   const [productoElegido, setProductoElegido] = useState<Producto | null>(null);
+  const [cantidad, setCantidad] = useState<number>(1);
+  const [precioUnitario, setPrecioUnitario] = useState<number>(0);
+  const [capitalUnitario, setCapitalUnitario] = useState<number>(0);
   const [precioFinal, setPrecioFinal] = useState("");
   const [montoCapital, setMontoCapital] = useState("");
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "digital">("efectivo");
@@ -65,6 +68,13 @@ export default function MovimientoFlow() {
   const [errorAnular, setErrorAnular] = useState<string | null>(null);
 
   const accion = accionId ? buscarAccion(tipo, accionId) : undefined;
+
+  function cambiarCantidad(nuevaCant: number) {
+    const cantValida = Math.max(1, nuevaCant);
+    setCantidad(cantValida);
+    setPrecioFinal((precioUnitario * cantValida).toFixed(2));
+    setMontoCapital((capitalUnitario * cantValida).toFixed(2));
+  }
 
   if (!tipoValido || !accion) {
     return <Navigate to={tipoValido ? `/${tipo}` : "/llanteria"} replace />;
@@ -91,8 +101,9 @@ export default function MovimientoFlow() {
           producto_id: productoElegido.id,
           cliente_vehiculo_id: null,
           tipo: accion!.categoria === "producto" ? "venta" : "servicio",
-          descripcion: accion!.label,
-          precio_lista: productoElegido.precio_lista,
+          cantidad: cantidad,
+          descripcion: cantidad > 1 ? `${cantidad}x ${accion!.label}` : accion!.label,
+          precio_lista: (Number(productoElegido.precio_lista) * cantidad).toFixed(2),
           precio_final: parseMoneyInput(precioFinal),
           monto_capital: esCapital(productoElegido.clasificacion)
             ? Number(parseMoneyInput(montoCapital))
@@ -160,11 +171,14 @@ export default function MovimientoFlow() {
       texto += `🔖 Ticket N°: #${String(movimientoCreado.id).padStart(5, "0")}\n`;
     }
     texto += `----------------------------------------\n`;
-    texto += `✅ *${productoElegido.nombre}*\n`;
+    texto += `✅ *${cantidad > 1 ? `${cantidad}x ` : ""}${productoElegido.nombre}*\n`;
     if (productoElegido.medida) texto += `• Medida: ${productoElegido.medida}\n`;
     if (productoElegido.marca) texto += `• Marca: ${productoElegido.marca}\n`;
     if (detalleCondicion) texto += `• Condición: ${detalleCondicion}\n`;
-    texto += `• Cantidad: 1\n`;
+    texto += `• Cantidad: ${cantidad}\n`;
+    if (cantidad > 1) {
+      texto += `• Precio unit.: S/ ${precioUnitario.toFixed(2)}\n`;
+    }
     texto += `\n💰 Total Pagado: *S/ ${Number(parseMoneyInput(precioFinal)).toFixed(2)}*\n`;
     texto += `💳 Método de Pago: ${metodo}\n`;
     texto += `----------------------------------------\n`;
@@ -215,8 +229,11 @@ export default function MovimientoFlow() {
           <div className={styles.ticketBody}>
             <div className={styles.ticketItemRow}>
               <div>
-                <span className={styles.ticketItemName}>{productoElegido?.nombre}</span>
+                <span className={styles.ticketItemName}>
+                  {cantidad > 1 ? `${cantidad}x ` : ""}{productoElegido?.nombre}
+                </span>
                 <div className={styles.ticketItemDetails}>
+                  <span>Cant: {cantidad} &nbsp;|&nbsp; S/ {precioUnitario.toFixed(2)} c/u</span>
                   {productoElegido?.medida && <span>Medida: {productoElegido.medida}</span>}
                   {productoElegido?.marca && <span>Marca: {productoElegido.marca}</span>}
                   {productoElegido?.estado_uso && (
@@ -518,6 +535,11 @@ export default function MovimientoFlow() {
                             className={styles.optionRow}
                             onClick={() => {
                               setProductoElegido(p);
+                              const pUnit = Number(p.precio_lista) || 0;
+                              const cUnit = Number(p.precio_compra) || 0;
+                              setPrecioUnitario(pUnit);
+                              setCapitalUnitario(cUnit);
+                              setCantidad(1);
                               setPrecioFinal(p.precio_lista);
                               setMontoCapital(p.precio_compra ?? "0");
                               setPaso("precio");
@@ -585,14 +607,95 @@ export default function MovimientoFlow() {
               </div>
             </div>
 
+            {/* Control Interactivo de Cantidad */}
+            <div className={styles.cantidadCard}>
+              <div className={styles.cantidadHeader}>
+                <label className={styles.fieldLabel} htmlFor="stepper-cantidad">
+                  Cantidad a registrar
+                </label>
+                {esProdCapital && (
+                  <span className={styles.stockDisponibleBadge}>
+                    Stock actual: {productoElegido.stock_actual}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.stepperContainer}>
+                <button
+                  type="button"
+                  className={styles.stepperBtn}
+                  onClick={() => cambiarCantidad(cantidad - 1)}
+                  disabled={cantidad <= 1}
+                  aria-label="Disminuir cantidad"
+                >
+                  −
+                </button>
+                <div className={styles.stepperInputWrapper}>
+                  <input
+                    id="stepper-cantidad"
+                    type="number"
+                    min="1"
+                    max={esProdCapital ? Math.max(1, productoElegido.stock_actual) : 999}
+                    value={cantidad}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val) && val >= 1) {
+                        cambiarCantidad(val);
+                      }
+                    }}
+                    className={styles.stepperInput}
+                  />
+                  <span className={styles.stepperUnitLabel}>
+                    {cantidad === 1 ? "unidad" : "unidades"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.stepperBtn}
+                  onClick={() => cambiarCantidad(cantidad + 1)}
+                  disabled={esProdCapital && cantidad >= productoElegido.stock_actual}
+                  aria-label="Aumentar cantidad"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Botones de selección rápida 1, 2, 3, 4 */}
+              <div className={styles.quickCantPills} role="group" aria-label="Cantidad rápida">
+                {[1, 2, 3, 4].map((n) => {
+                  const deshabilitado = esProdCapital && n > productoElegido.stock_actual;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`${styles.quickCantPill} ${cantidad === n ? styles.quickCantPillActive : ""}`}
+                      onClick={() => cambiarCantidad(n)}
+                      disabled={deshabilitado}
+                    >
+                      {n} {n === 1 ? "unidad" : "unidades"}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className={styles.priceCard}>
               <div className={styles.priceRow}>
-                <span className={styles.muted}>Precio de lista</span>
-                <span className={styles.strike}>{formatMoney(productoElegido.precio_lista)}</span>
+                <span className={styles.muted}>
+                  Precio unitario de lista {cantidad > 1 ? `(x ${cantidad})` : ""}
+                </span>
+                <span className={styles.strike}>
+                  {formatMoney((precioUnitario * cantidad).toFixed(2))}
+                </span>
               </div>
 
               <label className={styles.fieldLabel} htmlFor="precio-final">
-                {esProdCapital ? "Precio a cobrar" : "Precio final"}
+                {esProdCapital ? "Total a cobrar" : "Total final a cobrar"}
+                {cantidad > 1 && (
+                  <span className={styles.unitSubHint}>
+                    ({cantidad} x {formatMoney(precioUnitario.toFixed(2))})
+                  </span>
+                )}
               </label>
               <div className={styles.priceInput}>
                 <span>S/</span>
@@ -607,7 +710,12 @@ export default function MovimientoFlow() {
               {esProdCapital && (
                 <>
                   <label className={styles.fieldLabel} htmlFor="monto-capital">
-                    Capital a reponer
+                    Total capital a reponer
+                    {cantidad > 1 && (
+                      <span className={styles.unitSubHint}>
+                        ({cantidad} x {formatMoney(capitalUnitario.toFixed(2))})
+                      </span>
+                    )}
                   </label>
                   <div className={styles.priceInput}>
                     <span>S/</span>
@@ -619,7 +727,7 @@ export default function MovimientoFlow() {
                     />
                   </div>
                   <p className={styles.fieldHint}>
-                    Costo base del producto para reponer inventario (precargado con precio de compra).
+                    Costo base para reponer {cantidad} unidad(es) de inventario.
                   </p>
 
                   <div className={`${styles.gananciaBox} ${gananciaNeta < 0 ? styles.gananciaNegativa : ""}`}>
@@ -641,7 +749,11 @@ export default function MovimientoFlow() {
               )}
 
               {!esProdCapital && (
-                <p className={styles.fieldHint}>Se guardan ambos precios: el de lista y el que cobraste.</p>
+                <p className={styles.fieldHint}>
+                  {cantidad > 1
+                    ? `Calculado para ${cantidad} unidades. Puedes ajustar el total si realizaste un descuento o combo especial.`
+                    : "Se guardan ambos precios: el de lista y el que cobraste."}
+                </p>
               )}
             </div>
 
@@ -671,7 +783,9 @@ export default function MovimientoFlow() {
             <div className={styles.summaryChip}>
               <div>
                 <div className={styles.optionHeader}>
-                  <div className={styles.summaryName}>{productoElegido.nombre}</div>
+                  <div className={styles.summaryName}>
+                    {cantidad > 1 ? `${cantidad}x ` : ""}{productoElegido.nombre}
+                  </div>
                   {badge && (
                     <span
                       className={
@@ -682,7 +796,11 @@ export default function MovimientoFlow() {
                     </span>
                   )}
                 </div>
-                {productoElegido.marca && <div className={styles.optionSub}>{productoElegido.marca}</div>}
+                <div className={styles.optionSub}>
+                  Cantidad: <strong>{cantidad}</strong> {cantidad === 1 ? "unidad" : "unidades"}
+                  {cantidad > 1 && ` • S/ ${precioUnitario.toFixed(2)} c/u`}
+                  {productoElegido.marca && ` • ${productoElegido.marca}`}
+                </div>
               </div>
               <span className={styles.optionPrice}>{formatMoney(parseMoneyInput(precioFinal))}</span>
             </div>

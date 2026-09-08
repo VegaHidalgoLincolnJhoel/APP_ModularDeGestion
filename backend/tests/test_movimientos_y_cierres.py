@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from app.models.producto import Producto as ProductoModel
@@ -165,7 +165,7 @@ def test_cierre_caja_calculo_capital_y_ganancia(client, seed_data, db_session):
         headers=headers,
     )
 
-    hoy = date.today().isoformat()
+    hoy = datetime.utcnow().date().isoformat()
     cierre_payload = {
         "periodo": "diario",
         "fecha_inicio": hoy,
@@ -363,3 +363,163 @@ def test_anular_movimiento_no_encontrado_y_cross_tenant(client, seed_data, db_se
         headers=headers_dueno2,
     )
     assert resp_cross_mov.status_code == 404
+
+
+def test_crear_movimiento_servicio_con_cantidad_multiple(client, seed_data, db_session):
+    negocio_id = seed_data["negocio1"].id
+    headers = {"Authorization": f"Bearer {seed_data['token_dueno1']}"}
+
+    servicio = ProductoModel(
+        negocio_id=negocio_id,
+        nombre="Parchado",
+        clasificacion="servicio",
+        precio_lista=15.0,
+        precio_compra=0.0,
+        stock_actual=0,
+        stock_minimo=0,
+    )
+    db_session.add(servicio)
+    db_session.commit()
+    db_session.refresh(servicio)
+
+    # 3 parches a S/ 15 cada uno = S/ 45 de lista
+    resp = client.post(
+        f"/api/v1/negocios/{negocio_id}/movimientos",
+        json={
+            "usuario_id": seed_data["dueno1"].id,
+            "producto_id": servicio.id,
+            "tipo": "servicio",
+            "cantidad": 3,
+            "metodo_pago": "efectivo",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["cantidad"] == 3
+    assert Decimal(str(data["precio_lista"])) == Decimal("45.00")
+    assert Decimal(str(data["precio_final"])) == Decimal("45.00")
+    assert Decimal(str(data["monto_capital"])) == Decimal("0.00")
+
+
+def test_crear_movimiento_producto_capital_con_cantidad_multiple_y_stock(client, seed_data, db_session):
+    negocio_id = seed_data["negocio1"].id
+    headers = {"Authorization": f"Bearer {seed_data['token_dueno1']}"}
+
+    prod = ProductoModel(
+        negocio_id=negocio_id,
+        nombre="Llanta 185/65 R15",
+        clasificacion="capital",
+        precio_lista=180.0,
+        precio_compra=120.0,
+        stock_actual=8,
+        stock_minimo=2,
+    )
+    db_session.add(prod)
+    db_session.commit()
+    db_session.refresh(prod)
+
+    # Venta de 4 llantas: stock 8 -> 4, capital = 4 * 120 = 480
+    resp = client.post(
+        f"/api/v1/negocios/{negocio_id}/movimientos",
+        json={
+            "usuario_id": seed_data["dueno1"].id,
+            "producto_id": prod.id,
+            "tipo": "venta",
+            "cantidad": 4,
+            "precio_final": 700.0,  # Descuento combo negociado: S/ 700 en vez de 720
+            "metodo_pago": "digital",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["cantidad"] == 4
+    assert Decimal(str(data["precio_final"])) == Decimal("700.00")
+    assert Decimal(str(data["monto_capital"])) == Decimal("480.00")  # 4 * 120
+
+    db_session.refresh(prod)
+    assert prod.stock_actual == 4  # 8 - 4
+
+
+def test_crear_movimiento_stock_insuficiente_para_cantidad(client, seed_data, db_session):
+    negocio_id = seed_data["negocio1"].id
+    headers = {"Authorization": f"Bearer {seed_data['token_dueno1']}"}
+
+    prod = ProductoModel(
+        negocio_id=negocio_id,
+        nombre="Cámara 13",
+        clasificacion="capital",
+        precio_lista=30.0,
+        precio_compra=18.0,
+        stock_actual=2,
+        stock_minimo=1,
+    )
+    db_session.add(prod)
+    db_session.commit()
+    db_session.refresh(prod)
+
+    # Solicitar 3 cuando solo hay 2
+    resp = client.post(
+        f"/api/v1/negocios/{negocio_id}/movimientos",
+        json={
+            "usuario_id": seed_data["dueno1"].id,
+            "producto_id": prod.id,
+            "tipo": "venta",
+            "cantidad": 3,
+            "metodo_pago": "efectivo",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 409
+    assert "Stock insuficiente" in resp.text
+    db_session.refresh(prod)
+    assert prod.stock_actual == 2  # No se tocó
+
+
+def test_anular_movimiento_con_cantidad_multiple_restaura_todo_el_stock(client, seed_data, db_session):
+    negocio_id = seed_data["negocio1"].id
+    headers = {"Authorization": f"Bearer {seed_data['token_dueno1']}"}
+
+    prod = ProductoModel(
+        negocio_id=negocio_id,
+        nombre="Filtro de Aire",
+        clasificacion="capital",
+        precio_lista=45.0,
+        precio_compra=25.0,
+        stock_actual=10,
+        stock_minimo=2,
+    )
+    db_session.add(prod)
+    db_session.commit()
+    db_session.refresh(prod)
+
+    # Venta de 3 unidades
+    resp_venta = client.post(
+        f"/api/v1/negocios/{negocio_id}/movimientos",
+        json={
+            "usuario_id": seed_data["dueno1"].id,
+            "producto_id": prod.id,
+            "tipo": "venta",
+            "cantidad": 3,
+            "metodo_pago": "efectivo",
+        },
+        headers=headers,
+    )
+    assert resp_venta.status_code == 201
+    mov_id = resp_venta.json()["id"]
+
+    db_session.refresh(prod)
+    assert prod.stock_actual == 7  # 10 - 3
+
+    # Anular la venta
+    resp_anular = client.delete(
+        f"/api/v1/negocios/{negocio_id}/movimientos/{mov_id}",
+        headers=headers,
+    )
+    assert resp_anular.status_code == 200
+
+    # Stock debe haber regresado a 10 (7 + 3)
+    db_session.refresh(prod)
+    assert prod.stock_actual == 10
+

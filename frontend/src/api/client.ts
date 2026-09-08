@@ -252,6 +252,7 @@ export interface Movimiento {
   producto_id: number;
   cliente_vehiculo_id: number | null;
   tipo: string;
+  cantidad: number;
   descripcion: string | null;
   precio_lista: string;
   precio_final: string;
@@ -260,7 +261,8 @@ export interface Movimiento {
   fecha: string;
 }
 
-export type MovimientoCreate = Omit<Movimiento, "id" | "negocio_id" | "monto_capital"> & {
+export type MovimientoCreate = Omit<Movimiento, "id" | "negocio_id" | "monto_capital" | "cantidad"> & {
+  cantidad?: number;
   monto_capital?: number | null;
 };
 
@@ -359,10 +361,12 @@ async function procesarMovimientoOffline(
     estado: "pendiente",
   });
 
+  const cant = payload.cantidad && payload.cantidad > 0 ? payload.cantidad : 1;
+
   // 2. Descontar stock local optimista si es venta
   if (payload.tipo === "venta" || payload.monto_capital !== null) {
     try {
-      await actualizarStockOptimista(negocioId, payload.producto_id, -1);
+      await actualizarStockOptimista(negocioId, payload.producto_id, -cant);
     } catch (e) {
       console.warn("No se pudo descontar stock local optimista:", e);
     }
@@ -379,6 +383,7 @@ async function procesarMovimientoOffline(
     producto_id: payload.producto_id,
     cliente_vehiculo_id: payload.cliente_vehiculo_id ?? null,
     tipo: payload.tipo,
+    cantidad: cant,
     descripcion: payload.descripcion ?? null,
     precio_lista: payload.precio_lista,
     precio_final: payload.precio_final,

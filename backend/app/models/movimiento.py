@@ -19,6 +19,7 @@ class Movimiento(Base):
         ForeignKey("clientes_vehiculos.id"), nullable=True
     )
     tipo: Mapped[str] = mapped_column(String(50), nullable=False)
+    cantidad: Mapped[int] = mapped_column(default=1, nullable=False)
     descripcion: Mapped[str | None] = mapped_column(String(500), nullable=True)
     precio_lista: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
     precio_final: Mapped[float] = mapped_column(Numeric(10, 2), default=0)

@@ -890,6 +890,7 @@ components:
         producto_id: { type: integer }
         cliente_vehiculo_id: { type: integer, nullable: true }
         tipo: { type: string, description: "ej. venta, servicio" }
+        cantidad: { type: integer, default: 1, minimum: 1 }
         descripcion: { type: string, nullable: true }
         precio_lista: { type: string, format: decimal }
         precio_final: { type: string, format: decimal }
