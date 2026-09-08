@@ -246,20 +246,25 @@
   }
 }
 
+.productCard,
 .card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.1));
+  border-radius: var(--radius-md, 14px);
   padding: 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 12px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
+.productCard:hover,
 .card:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  border-color: rgba(13, 148, 136, 0.35);
 }
 
 .cardBajo {
@@ -267,18 +272,60 @@
   background: var(--danger-soft);
 }
 
-.cardMedidaRow {
+.brandList {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.brandGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.brandGroupHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brandName {
+  font-family: var(--font-display, "Sora", sans-serif);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+
+.brandCount {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-faint);
+  background: var(--paper);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.cardMedidaRow,
+.cardTop {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
 
-.cardTitleBlock {
+.cardTitleBlock,
+.titleArea {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .cardMedida {
@@ -1203,9 +1250,10 @@
 /* ========================================================================= */
 
 .cardMarcaTitle {
+  font-family: var(--font-display, "Sora", sans-serif);
   font-size: 16px;
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--ink, #0f172a);
   line-height: 1.25;
   margin: 0;
   letter-spacing: -0.01em;
@@ -1215,7 +1263,7 @@
   display: inline-block;
   font-size: 13.5px;
   font-weight: 700;
-  color: #38bdf8;
+  color: #0284c7;
   line-height: 1.3;
   margin-top: 3px;
 }
@@ -1223,7 +1271,8 @@
 .cardExtraNombre {
   display: block;
   font-size: 11.5px;
-  color: #94a3b8;
+  font-weight: 500;
+  color: var(--ink-soft, #475569);
   margin-top: 2px;
 }
 
@@ -1232,15 +1281,15 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: -4px;
+  margin: 2px 0 6px;
 }
 
 .categoryFilterLabel {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #94a3b8;
+  color: var(--ink-faint, #64748b);
 }
 
 .categoryFilterRow {
@@ -1248,7 +1297,7 @@
   align-items: center;
   gap: 8px;
   overflow-x: auto;
-  padding: 2px 2px 6px 2px;
+  padding: 4px 2px 8px 2px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
@@ -1258,7 +1307,7 @@
 }
 
 .categoryFilterRow::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--line, rgba(0, 0, 0, 0.12));
   border-radius: 4px;
 }
 
@@ -1266,30 +1315,31 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
-  padding: 6px 13px;
-  border-radius: 10px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.12));
+  color: var(--ink, #1e293b);
+  padding: 6px 14px;
+  border-radius: 9999px;
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   transition: all 0.18s ease;
   user-select: none;
 }
 
 .categoryFilterPill:hover {
-  background: rgba(30, 41, 59, 0.85);
-  border-color: rgba(20, 184, 166, 0.4);
-  color: #ffffff;
+  background: rgba(13, 148, 136, 0.06);
+  border-color: #0d9488;
+  color: #0f766e;
 }
 
 .categoryFilterPillActive {
-  background: rgba(13, 148, 136, 0.22);
-  border-color: #14b8a6;
-  color: #2dd4bf;
-  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.2);
+  background: #0d9488;
+  border-color: #0d9488;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.28);
 }
 
 .categoryFilterBadge {
@@ -1302,11 +1352,11 @@
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.08);
   color: inherit;
 }
 
 .categoryFilterPillActive .categoryFilterBadge {
-  background: rgba(20, 184, 166, 0.35);
-  color: #5eead4;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
 }
