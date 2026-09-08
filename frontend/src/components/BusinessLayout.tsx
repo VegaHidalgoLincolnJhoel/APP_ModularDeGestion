@@ -140,6 +140,7 @@ export default function BusinessLayout() {
         <TutorialModal
           negocioNombre={negocio.nombre}
           negocioTipo={tipo}
+          negocio={negocio}
           onClose={cerrarTutorial}
         />
       )}

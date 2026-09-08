@@ -440,3 +440,60 @@
   background: #15803d;
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
 }
+
+/* Nuevos Estilos para Demos Interactivos del Tutorial Dinámico */
+.demoPillList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.demoPill {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.12));
+  color: var(--ink, #0f172a);
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.demoPill:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.demoPillActive {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.demoResultCard {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.demoSunatProgress {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin: 6px 0;
+}
+
+.demoSunatFill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  border-radius: 9999px;
+}
